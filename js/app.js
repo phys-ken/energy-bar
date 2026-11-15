@@ -11,6 +11,8 @@
   const APP_CHART = { theme: 'color', fs: 5.2, fsName: 4.4, fsTitle: 5.0, fsWork: 4.2 };   // スマホで数字が 14 px 以上になる大きさ
 
   const st = { format: 'read', units: ['M'], quiz: null };
+  // 図の文字も画面と同じ書体に（問題文と図で書体が変わらないように）
+  EBar.setFonts('"BIZ UDPGothic", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif');
 
   /* ---------- ホーム ---------- */
   function renderHome() {
@@ -71,6 +73,9 @@
     $('qText').innerHTML = q.text;
     $('qAsk').innerHTML = q.ask;
     $('qScene').innerHTML = q.scene ? EScene.scene(q.scene, { theme: 'color' }) : '';
+    // 場面の図は中身に合わせて切り詰めてあるので、幅いっぱいに引きのばさず、実寸 × 一定の倍率で出す（文字が約 15 px）
+    const ssvg = $('qScene').querySelector('svg');
+    if (ssvg) { const mm = parseFloat(ssvg.getAttribute('width')); ssvg.style.width = Math.round(mm * 3.6) + 'px'; ssvg.style.maxWidth = '100%'; }
     $('feedback').classList.add('hidden'); $('feedback').innerHTML = '';
     $('answerArea').classList.remove('hidden');
     const ch = $('qChart'); ch.className = 'chart';

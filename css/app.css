@@ -54,12 +54,13 @@ button.on { background: var(--on); border-color: var(--on); color: #fff; }
 .qtext { font-size: 18px; line-height: 1.75; margin: 0 0 8px; }
 .qtext .ask { display: block; margin-top: 4px; font-size: 19px; }
 .figs { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: flex-start; margin-bottom: 10px; }
-.figs .scene { flex: 1 1 300px; max-width: 460px; }
+.figs .scene { flex: 0 1 auto; max-width: 100%; }
 .figs .chart { flex: 1 1 340px; max-width: 560px; }
 .figs .scene:empty { display: none; }
 .figs .chart.wide { flex: 1 1 100%; max-width: 1000px; }
 button:disabled { opacity: .35; cursor: default; }
-.scene svg, .chart svg, .fbchart svg { display: block; width: 100%; height: auto; }
+.chart svg, .fbchart svg { display: block; width: 100%; height: auto; }
+.scene svg { display: block; height: auto; }   /* 幅は app.js が実寸 × 3.6 px/mm で決める */
 .answer { max-width: 460px; }
 .warnnote { color: var(--ng); font-size: 14px; margin-left: 6px; }
 .chart.draw svg { touch-action: none; -webkit-user-select: none; user-select: none; }
