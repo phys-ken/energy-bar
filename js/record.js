@@ -4,7 +4,7 @@
  *
  * QR① 記録データ
  *   ENERGY-BAR RECORD v1
- *   id=記録ID / name=名前 / course=段 単元 / start / end / score=得点 / limit=制限時間
+ *   id=記録ID / name=ニックネーム（本名は入れさせない） / course=単元,単元 出題形式（例 K,Us read） / start / end / score=得点 / limit=制限時間
  *   q01=種類-たね in=入れた答え ans=正解 ok|ng|timeout 秒数
  *   salt=ソルト
  *   rule=照合のしかた

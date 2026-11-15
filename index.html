@@ -14,15 +14,15 @@
     <h1>エネルギー棒グラフ 演習</h1>
     <p class="lead">1 回 10 問。時間内に答えましょう。10 問すべて正解で「クリア」です。</p>
 
-    <label class="field"><span>名前 <span class="dim">（例：3 番 山田）</span></span>
-      <input id="name" maxlength="20" autocomplete="off" placeholder="出席番号と名前">
+    <label class="field"><span>ニックネーム <span class="warnnote">本名は入れないでください</span></span>
+      <input id="name" maxlength="16" autocomplete="off" placeholder="ニックネーム">
     </label>
 
-    <h2>段を選ぶ</h2>
-    <div id="levels" class="levels"></div>
-
-    <h2 id="unitsHead">単元を選ぶ <span class="dim">（いくつでも。選んだ単元がまざって出ます）</span></h2>
+    <h2>1. 単元を選ぶ <span class="dim">（いくつでも。選んだ単元がまざって出ます）</span></h2>
     <div id="units" class="units"></div>
+
+    <h2>2. 出題形式を選ぶ</h2>
+    <div id="formats" class="levels"></div>
 
     <button id="start" class="big primary" type="button">はじめる</button>
     <p id="homeMsg" class="msg"></p>
@@ -32,24 +32,22 @@
 <!-- 問題 -->
 <section id="vQuiz" class="view hidden">
   <header class="qtop">
-    <span id="qLevel" class="tag"></span>
+    <span id="qFormat" class="tag"></span>
     <span id="qNum" class="qnum"></span>
     <div class="timer"><div id="timerBar"></div></div>
     <span id="timerTxt" class="ttxt"></span>
     <button id="bSheet" class="tool" type="button">✏️<span class="lbl"> 計算用紙</span></button>
     <button id="bCalc" class="tool" type="button">🧮<span class="lbl"> 電卓</span></button>
   </header>
-  <main class="qmain" id="qmain">
-    <div id="qSys" class="sys"></div>
-    <div id="qText" class="qtext"></div>
-    <div id="qScene" class="scene"></div>
-    <div id="qChart" class="chart"></div>
+  <!-- 問題文と問いは 1 か所。その下に図、そのすぐ下で答える（視線を上から下へ 1 本に） -->
+  <main class="qscroll" id="qscroll">
+    <div class="qcard">
+      <p class="qtext"><span id="qSys" class="sys"></span><span id="qText"></span><b id="qAsk" class="ask"></b></p>
+      <div class="figs" id="figs"><div id="qScene" class="scene"></div><div id="qChart" class="chart"></div></div>
+      <div id="answerArea" class="answer"></div>
+      <div id="feedback" class="feedback hidden"></div>
+    </div>
   </main>
-  <aside class="qside" id="qside">
-    <div id="qAsk" class="ask"></div>
-    <div id="answerArea"></div>
-    <div id="feedback" class="feedback hidden"></div>
-  </aside>
 </section>
 
 <!-- 結果 -->
@@ -64,7 +62,7 @@
       <p class="dim">保存した画像を Classroom に提出してください。保存できないときは、画像を長押しして保存するか、画面のスクリーンショットを撮ってください。</p>
     </div>
     <div class="row">
-      <button id="again" class="big" type="button">もう一度（同じ段・単元）</button>
+      <button id="again" class="big" type="button">もう一度（同じ単元・出題形式）</button>
       <button id="home" class="big" type="button">はじめの画面へ</button>
     </div>
   </div>

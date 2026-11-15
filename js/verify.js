@@ -47,10 +47,11 @@ const verifier = {
     } catch (err) { return { file: file.name, ok: false, readable: false, reasons: [String(err.message || err)], record: null }; }
   },
   esc: s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'),
+  // course 行は「単元,単元 出題形式」（例 K,Us read）
   courseName(c) {
-    const m = /^L(\d)(?: (.+))?$/.exec(c || ''); if (!m) return c || '';
-    const lv = EGen.LEVELS[+m[1] - 1];
-    return `段${m[1]} ${lv ? lv.name : ''}` + (m[2] ? '｜' + m[2].split(',').map(u => (EGen.UNITS.find(x => x.id === u) || { name: u }).name).join('・') : '');
+    const m = /^([A-Za-z,]+) ([a-z]+)$/.exec(c || ''); if (!m) return c || '';
+    const f = EGen.fmtOf(m[2]);
+    return `${f ? f.name : m[2]}｜` + m[1].split(',').map(u => (EGen.UNITS.find(x => x.id === u) || { name: u }).name).join('・');
   },
   rows() {
     const idCount = {};
@@ -99,7 +100,7 @@ const verifier = {
     return s + ' ' + q.answer.unit;
   },
   csv() {
-    const head = ['画像', '判定', '名前', '段・単元', '得点', '回答日時', '記録ID', '理由・注意'];
+    const head = ['画像', '判定', 'ニックネーム', '出題形式・単元', '得点', '回答日時', '記録ID', '理由・注意'];
     const q = s => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
     const lines = [head.map(q).join(',')].concat(this.rows().map(x => [x.r.file, x.verdict, x.f.name, this.courseName(x.f.course), x.f.score, x.when, x.f.id, x.notes.join(' / ')].map(q).join(',')));
     const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv' });
@@ -115,7 +116,7 @@ const verifier = {
   async onPaste() {
     const v = await recordLib.verifyPair(document.getElementById('paste-record').value.trim(), document.getElementById('paste-check').value.trim());
     const f = v.record.fields, out = document.getElementById('paste-result');
-    out.textContent = (v.ok ? '本物' : '不一致：' + v.reasons.join(' / ')) + `\n名前: ${f.name || ''}\n段・単元: ${this.courseName(f.course)}\n得点: ${f.score || ''}\n開始: ${f.start || ''}\n記録ID: ${f.id || ''}`;
+    out.textContent = (v.ok ? '本物' : '不一致：' + v.reasons.join(' / ')) + `\nニックネーム: ${f.name || ''}\n出題形式・単元: ${this.courseName(f.course)}\n得点: ${f.score || ''}\n開始: ${f.start || ''}\n記録ID: ${f.id || ''}`;
     out.hidden = false;
   },
 };
@@ -126,9 +127,9 @@ document.querySelector('#result-table tbody').addEventListener('click', e => { c
 
 // 自己テスト（?test）: 記録を作って照合し、作り直した問題の表示まで通す
 if (/[?&]test/.test(location.search)) (async () => {
-  const qs = EGen.quiz(3, ['K', 'Us', 'Ug', 'C', 'F']);
+  const qs = EGen.quiz(EGen.fmtOf('draw').n, ['K', 'Us', 'Ug', 'C', 'F']);
   const items = qs.map(q => ({ qid: q.qid, input: EGen.fmtAns(q), ans: EGen.fmtAns(q), verdict: 'ok', elapsedSec: 3 }));
-  const rec = { id: recordLib.newRecordId(), name: 'テスト', course: 'L3 K,Us,Ug,C,F', start: new Date(), end: new Date(), limitSec: 45, items };
+  const rec = { id: recordLib.newRecordId(), name: 'テスト', course: 'K,Us,Ug,C,F draw', start: new Date(), end: new Date(), limitSec: 45, items };
   const qr = await recordLib.buildQrTexts(rec);
   const v = await recordLib.verifyPair(qr.recordText, qr.checkText); v.file = 'x.png'; v.readable = true;
   verifier.results = [v, Object.assign({}, v, { file: 'y.png' })];

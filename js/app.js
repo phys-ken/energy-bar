@@ -1,46 +1,47 @@
 /* エネルギー棒グラフ 演習（生徒用）。決まりは docs/decisions.md。
- * ホーム（名前・段・単元）→ 10 問（時間つき）→ 結果（記録の画像と QR）。
- * URL: ?test で自己テスト（結果をタイトルに出す）
+ * ホーム（ニックネーム・単元・出題形式）→ 10 問（時間つき）→ 結果（記録の画像と QR）。
+ * 画面: 問題文と問いは 1 か所、その下に図、そのすぐ下で答える（先生の指摘 2026-11-15）。
+ * URL: ?test で自己テスト（結果をタイトルに出す）。?demo=形式&q=種類-たね[&fb=1] で見本表示
  */
 'use strict';
 (function () {
   const $ = id => document.getElementById(id);
-  const LS = { name: 'ebar.name', level: 'ebar.level', units: 'ebar.units' };
+  const LS = { name: 'ebar.nick', format: 'ebar.format', units: 'ebar.units' };
   const N_Q = 10;
-  const APP_CHART = { theme: 'color', fs: 5.2, fsName: 4.4, fsTitle: 5.4, fsWork: 4.2 };   // スマホで数字が 14 px 以上になる大きさ
+  const APP_CHART = { theme: 'color', fs: 5.2, fsName: 4.4, fsTitle: 5.0, fsWork: 4.2 };   // スマホで数字が 14 px 以上になる大きさ
 
-  const st = { level: 2, units: ['K'], quiz: null };
+  const st = { format: 'read', units: ['M'], quiz: null };
 
   /* ---------- ホーム ---------- */
   function renderHome() {
     $('name').value = localStorage.getItem(LS.name) || '';
-    st.level = +(localStorage.getItem(LS.level) || 2);
-    try { st.units = JSON.parse(localStorage.getItem(LS.units)) || ['K']; } catch (_) { st.units = ['K']; }
-    $('levels').innerHTML = EGen.LEVELS.map(l =>
-      `<button type="button" data-l="${l.n}"><span class="n">段${l.n}</span>${l.name}<span class="t">1 問 ${l.time} 秒</span></button>`).join('');
-    $('units').innerHTML = EGen.UNITS.map(u =>
-      `<label data-u="${u.id}"><input type="checkbox" value="${u.id}">${u.name}</label>`).join('');
+    st.format = localStorage.getItem(LS.format) || 'read';
+    try { st.units = JSON.parse(localStorage.getItem(LS.units)) || ['M']; } catch (_) { st.units = ['M']; }
+    $('units').innerHTML = EGen.UNITS.map(u => `<label data-u="${u.id}"><input type="checkbox" value="${u.id}">${u.name}</label>`).join('');
+    $('formats').innerHTML = EGen.FORMATS.map(f => `<button type="button" data-f="${f.id}">${f.name}<span class="t">1 問 ${f.time} 秒</span></button>`).join('');
     syncHome();
   }
+  const okFormats = () => EGen.FORMATS.filter(f => EGen.available(f.n, st.units).length).map(f => f.id);
   function syncHome() {
-    document.querySelectorAll('#levels button').forEach(b => b.classList.toggle('on', +b.dataset.l === st.level));
     document.querySelectorAll('#units label').forEach(l => {
-      const on = st.units.includes(l.dataset.u);
-      l.classList.toggle('on', on); l.querySelector('input').checked = on;
+      const on = st.units.includes(l.dataset.u); l.classList.toggle('on', on); l.querySelector('input').checked = on;
     });
-    $('units').classList.toggle('off', st.level === 1);
-    $('unitsHead').classList.toggle('dim', st.level === 1);
+    const ok = okFormats();
+    if (!ok.includes(st.format) && ok.length) st.format = ok[0];
+    document.querySelectorAll('#formats button').forEach(b => {
+      b.classList.toggle('on', b.dataset.f === st.format);
+      b.disabled = !ok.includes(b.dataset.f);
+    });
   }
-  $('levels').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.level = +b.dataset.l; syncHome(); });
-  $('units').addEventListener('change', () => {
-    st.units = [...document.querySelectorAll('#units input:checked')].map(i => i.value); syncHome();
-  });
+  $('units').addEventListener('change', () => { st.units = [...document.querySelectorAll('#units input:checked')].map(i => i.value); syncHome(); });
+  $('formats').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; st.format = b.dataset.f; syncHome(); });
   $('start').onclick = () => {
     const name = $('name').value.trim();
-    if (!name) { $('homeMsg').textContent = '名前を入れてください。'; $('name').focus(); return; }
-    if (st.level !== 1 && !st.units.length) { $('homeMsg').textContent = '単元を 1 つ以上選んでください。'; return; }
+    if (!name) { $('homeMsg').textContent = 'ニックネームを入れてください（本名は入れないでください）。'; $('name').focus(); return; }
+    if (!st.units.length) { $('homeMsg').textContent = '単元を 1 つ以上選んでください。'; return; }
+    if (!okFormats().includes(st.format)) { $('homeMsg').textContent = '出題形式を選んでください。'; return; }
     $('homeMsg').textContent = '';
-    localStorage.setItem(LS.name, name); localStorage.setItem(LS.level, st.level); localStorage.setItem(LS.units, JSON.stringify(st.units));
+    localStorage.setItem(LS.name, name); localStorage.setItem(LS.format, st.format); localStorage.setItem(LS.units, JSON.stringify(st.units));
     startQuiz();
   };
 
@@ -48,36 +49,35 @@
 
   /* ---------- 10 問 ---------- */
   function startQuiz() {
-    const lv = EGen.LEVELS[st.level - 1];
-    st.quiz = { level: st.level, units: st.units.slice(), limit: lv.time, qs: EGen.quiz(st.level, st.units, N_Q), i: 0, items: [],
+    const f = EGen.fmtOf(st.format);
+    st.quiz = { format: f, units: st.units.slice(), limit: f.time, qs: EGen.quiz(f.n, st.units, N_Q), i: 0, items: [],
       id: recordLib.newRecordId(), start: new Date(), name: $('name').value.trim() };
     Pad.reset(); Calc.clear();
     show('vQuiz');
     renderQ();
   }
 
-  let timer = null, t0 = 0, answered = false, input = '', drawVal = null, choiceSel = null;
+  let timer = null, t0 = 0, answered = false, input = '', drawVal = null;
   const cur = () => st.quiz.qs[st.quiz.i];
-
   function chartSVG(c, extra) { return EBar.chart(c.states, Object.assign({}, c.opt, APP_CHART, extra || {})); }
 
   function renderQ() {
-    const qz = st.quiz, q = cur(), lv = EGen.LEVELS[qz.level - 1];
-    answered = false; input = ''; drawVal = null; choiceSel = null;
-    $('qLevel').innerHTML = `段${qz.level}<span class="lbl"> ${lv.name}</span>`;
+    const qz = st.quiz, q = cur();
+    answered = false; input = ''; drawVal = null;
+    $('qFormat').innerHTML = `<span class="lbl">${qz.format.name}</span>`;
     $('qNum').textContent = `${qz.i + 1} / ${qz.qs.length}`;
     $('qSys').textContent = q.sys ? `系：${q.sys}` : '';
-    $('qSys').classList.toggle('hidden', !q.sys || q.level === 1);
+    $('qSys').classList.toggle('hidden', !q.sys);
     $('qText').innerHTML = q.text;
-    $('qScene').innerHTML = q.scene ? EScene.scene(q.scene, { theme: 'color' }) : '';
     $('qAsk').innerHTML = q.ask;
+    $('qScene').innerHTML = q.scene ? EScene.scene(q.scene, { theme: 'color' }) : '';
     $('feedback').classList.add('hidden'); $('feedback').innerHTML = '';
     $('answerArea').classList.remove('hidden');
     const ch = $('qChart'); ch.className = 'chart';
     const a = q.answer;
     if (a.kind === 'num') {
       ch.innerHTML = q.chart ? chartSVG(q.chart) : '';
-      $('answerArea').innerHTML = `<div class="ansrow"><div id="ansbox" class="ansbox empty">数を入れる</div><span class="unit">${a.unit}</span></div>` +
+      $('answerArea').innerHTML = `<div class="ansrow"><span class="anslbl">答え</span><div id="ansbox" class="ansbox empty">数を入れる</div><span class="unit">${a.unit}</span></div>` +
         `<div class="keypad" id="keypad">${['7', '8', '9', '⌫', '4', '5', '6', '−', '1', '2', '3', '.'].map(k => `<button type="button" data-k="${k}">${k}</button>`).join('')}` +
         `<button type="button" data-k="0" class="wide">0</button><button type="button" data-k="ok" class="wide go">決定</button></div>`;
       $('keypad').addEventListener('click', onKey);
@@ -90,11 +90,13 @@
       $('dReset').onclick = () => { drawVal = { K: 0, Us: 0, Ug: 0 }; redrawDraw(); };
       $('dOk').onclick = () => finish(drawVal);
     } else if (a.kind === 'choice') {
+      ch.className = 'chart wide';
       ch.innerHTML = `<div class="choices">${a.choices.map((c, i) => `<div class="choice" data-i="${i}"><span class="mk">${'ABC'[i]}</span>${chartSVG(c, { fs: 5.0 })}</div>`).join('')}</div>`;
-      ch.querySelectorAll('.choice').forEach(el => el.onclick = () => { if (!answered) { choiceSel = +el.dataset.i; el.classList.add('sel'); finish(choiceSel); } });
-      $('answerArea').innerHTML = `<p class="dim">図をタップして選ぶ</p>`;
+      ch.querySelectorAll('.choice').forEach(el => el.onclick = () => { if (!answered) { el.classList.add('sel'); finish(+el.dataset.i); } });
+      $('answerArea').innerHTML = `<p class="dim">正しい棒グラフをタップして答える</p>`;
     }
-    $('qmain').scrollTop = 0;
+    $('figs').classList.toggle('stack', a.kind === 'choice');
+    $('qscroll').scrollTop = 0;
     Pad.load('q' + qz.i);
     startTimer();
   }
@@ -116,16 +118,15 @@
     box.classList.toggle('empty', input === '');
   }
 
-  /* 棒グラフをかく（あとの 3 本をドラッグ。10 J 刻み） */
+  /* 棒グラフをかく（終わりの場面の 3 本をドラッグ。10 J 刻み） */
   function drawStates() {
-    const q = cur(), c = q.chart, s1 = Object.assign({}, c.states[1], drawVal, { blank: false });
+    const c = cur().chart, s1 = Object.assign({}, c.states[1], drawVal, { blank: false });
     return { states: [c.states[0], s1], opt: Object.assign({}, c.opt, APP_CHART) };
   }
   function drawSVG() { const d = drawStates(); return EBar.chart(d.states, d.opt); }
   function redrawDraw() {
     const svg = $('qChart').querySelector('svg'), tmp = document.createElement('div');
-    tmp.innerHTML = drawSVG();
-    svg.innerHTML = tmp.querySelector('svg').innerHTML;
+    tmp.innerHTML = drawSVG(); svg.innerHTML = tmp.querySelector('svg').innerHTML;
   }
   function bindDraw() {
     const svg = $('qChart').querySelector('svg');
@@ -134,14 +135,12 @@
     const toSvg = e => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); };
     const set = (e, L) => {
       const p = toSvg(e), k = ['K', 'Us', 'Ug'][col];
-      const v = Math.round((L.baseY - p.y) / L.mpu) * L.unit;
-      drawVal[k] = Math.max(0, Math.min(L.unitsUp * L.unit, v));
+      drawVal[k] = Math.max(0, Math.min(L.unitsUp * L.unit, Math.round((L.baseY - p.y) / L.mpu) * L.unit));
       redrawDraw();
     };
     svg.addEventListener('pointerdown', e => {
       if (answered) return;
-      const L = geo(), p = toSvg(e);
-      col = null;
+      const L = geo(), p = toSvg(e); col = null;
       for (let j = 0; j < 3; j++) { const x = L.barX(1, j); if (p.x >= x - L.gap / 2 && p.x <= x + L.bw + L.gap / 2) col = j; }
       if (col === null) return;
       e.preventDefault(); cap(svg, e.pointerId); set(e, L);
@@ -154,13 +153,11 @@
 
   /* 時間 */
   function startTimer() {
-    stopTimer();
-    t0 = performance.now();
+    stopTimer(); t0 = performance.now();
     const lim = st.quiz.limit * 1000, bar = $('timerBar'), txt = $('timerTxt');
     const tick = () => {
-      const el = performance.now() - t0, left = Math.max(0, lim - el);
-      bar.style.transform = `scaleX(${left / lim})`;
-      bar.classList.toggle('low', left < 10000);
+      const left = Math.max(0, lim - (performance.now() - t0));
+      bar.style.transform = `scaleX(${left / lim})`; bar.classList.toggle('low', left < 10000);
       txt.textContent = Math.ceil(left / 1000) + '秒';
       if (left <= 0) { finish(null, true); return; }
       timer = requestAnimationFrame(tick);
@@ -173,14 +170,12 @@
   function finish(value, timedOut) {
     if (answered) return;
     answered = true; stopTimer();
-    const qz = st.quiz, q = cur();
-    const elapsed = Math.min(qz.limit, (performance.now() - t0) / 1000);
+    const qz = st.quiz, q = cur(), elapsed = Math.min(qz.limit, (performance.now() - t0) / 1000);
     const ok = !timedOut && EGen.check(q, q.answer.kind === 'num' ? String(value) : value);
     qz.items.push({ qid: q.qid, input: timedOut ? '-' : EGen.fmtIn(q, value), ans: EGen.fmtAns(q), verdict: timedOut ? 'timeout' : (ok ? 'ok' : 'ng'), elapsedSec: elapsed });
     Pad.save('q' + qz.i);
     showFeedback(q, ok, timedOut, value);
   }
-
   function correctText(q) {
     const a = q.answer;
     if (a.kind === 'num') return `正解は <b>${(a.show || EGen.f2(a.value)).replace('-', '−')} ${a.unit}</b>`;
@@ -189,37 +184,31 @@
   }
   function showFeedback(q, ok, timedOut, value) {
     const a = q.answer;
-    const v = timedOut ? '<div class="verdict ng">時間切れ</div>' : ok ? '<div class="verdict ok">正解</div>' : '<div class="verdict ng">不正解</div>';
-    let h = v + `<div>${correctText(q)}</div>`;
+    let h = (timedOut ? '<div class="verdict ng">時間切れ</div>' : ok ? '<div class="verdict ok">正解</div>' : '<div class="verdict ng">不正解</div>') + `<div>${correctText(q)}</div>`;
     if (a.kind === 'choice') {
       $('qChart').querySelectorAll('.choice').forEach((el, i) => { el.classList.toggle('right', i === a.correct); el.classList.toggle('wrong', i === value && i !== a.correct); });
       if (!ok && value != null) h += `<p><b>${'ABC'[value]}</b>：${a.why[value]}</p>`;
       h += `<p><b>${'ABC'[a.correct]}</b>：${a.why[a.correct].replace(/^正解。/, '')}</p>`;
-    } else {
-      h += `<ul>${q.explain.map(s => `<li>${s}</li>`).join('')}</ul>`;
-    }
+    } else h += `<ul>${q.explain.map(s => `<li>${s}</li>`).join('')}</ul>`;
     if (q.explainChart && a.kind !== 'choice') h += `<div class="fbchart">${chartSVG(q.explainChart, { fs: 5.0 })}</div>`;
     const last = st.quiz.i === st.quiz.qs.length - 1;
     h += `<button type="button" class="big primary next" id="next">${last ? '結果を見る' : '次へ'}</button>`;
     $('answerArea').classList.add('hidden');
     $('feedback').innerHTML = h; $('feedback').classList.remove('hidden');
-    $('qside').scrollTop = 0;
+    $('feedback').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     $('next').onclick = next;
   }
   function next() {
     const qz = st.quiz;
     if (qz.i < qz.qs.length - 1) { qz.i++; renderQ(); return; }
-    qz.end = new Date();
-    closeSheet(); Calc.close();
+    qz.end = new Date(); closeSheet(); Calc.close();
     showResult();
   }
 
   /* ---------- 結果と記録 ---------- */
-  function courseOf(qz) { return 'L' + qz.level + (qz.level === 1 ? '' : ' ' + qz.units.join(',')); }
-  function courseTitle(qz) {
-    const lv = EGen.LEVELS[qz.level - 1];
-    return `段${qz.level} ${lv.name}` + (qz.level === 1 ? '' : '｜' + qz.units.map(u => EGen.UNITS.find(x => x.id === u).name).join('・'));
-  }
+  // 記録の course 行: 「単元,単元 出題形式」（例 K,Us read）
+  const courseOf = qz => qz.units.join(',') + ' ' + qz.format.id;
+  const courseTitle = qz => `${qz.format.name}｜` + qz.units.map(u => EGen.UNITS.find(x => x.id === u).name).join('・');
   function showResult() {
     const qz = st.quiz, ok = qz.items.filter(it => it.verdict === 'ok').length;
     show('vResult');
@@ -227,15 +216,13 @@
     $('rClear').classList.toggle('hidden', ok !== qz.items.length);
     $('rList').innerHTML = qz.items.map((it, i) => {
       const q = qz.qs[i], lab = it.verdict === 'ok' ? '<span class="ok">正解</span>' : it.verdict === 'timeout' ? '<span class="ng">時間切れ</span>' : '<span class="ng">不正解</span>';
-      return `<li>${lab}　${q.ask.replace(/<[^>]+>/g, '').slice(0, 26)}　<span class="dim">${it.elapsedSec.toFixed(1)} 秒</span></li>`;
+      return `<li>${lab}　${q.ask.replace(/<[^>]+>/g, '').slice(0, 30)}　<span class="dim">${it.elapsedSec.toFixed(1)} 秒</span></li>`;
     }).join('');
     const rec = { id: qz.id, name: qz.name, course: courseOf(qz), start: qz.start, end: qz.end, limitSec: qz.limit, items: qz.items };
     $('recordImg').removeAttribute('src');
     return recordLib.buildQrTexts(rec).then(qr => {
       const url = drawRecord(rec, qr, qz, ok);
-      $('recordImg').src = url; $('recordDl').href = url;
-      $('recordDl').download = `回答記録_段${qz.level}_${qz.id}.png`;
-      st.lastQr = qr;
+      $('recordImg').src = url; $('recordDl').href = url; $('recordDl').download = `回答記録_${qz.id}.png`;
       return qr;
     });
   }
@@ -250,15 +237,15 @@
     const W = 1080, pad = 56, rowH = 50, qrSize = 600, H = 330 + rec.items.length * rowH + 30 + qrSize + 40;
     const cv = $('recordCanvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d'), font = '"BIZ UDPGothic", "Hiragino Sans", "Noto Sans JP", Meiryo, sans-serif';
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#1f5fbf'; ctx.fillRect(0, 0, W, 12);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#1f5fbf'; ctx.fillRect(0, 0, W, 12);
     ctx.textBaseline = 'top'; ctx.fillStyle = '#151515'; ctx.font = '700 40px ' + font;
     ctx.fillText('エネルギー棒グラフ 演習 回答記録', pad, 44);
-    ctx.font = '400 26px ' + font; ctx.fillStyle = '#555';
-    ctx.fillText(courseTitle(qz) + '（1 問 ' + rec.limitSec + ' 秒）', pad, 98);
-    const info = [['名前', rec.name], ['回答日時', recordLib.formatLocalIso(rec.start).replace('T', ' ').slice(0, 19) + ' 〜 ' + recordLib.formatLocalIso(rec.end).slice(11, 19)], ['記録ID', rec.id]];
+    ctx.font = '400 24px ' + font; ctx.fillStyle = '#555';
+    const ct = courseTitle(qz) + '（1 問 ' + rec.limitSec + ' 秒）';
+    ctx.fillText(ct.length > 40 ? ct.slice(0, 40) + '…' : ct, pad, 98);
+    const info = [['ニックネーム', rec.name], ['回答日時', recordLib.formatLocalIso(rec.start).replace('T', ' ').slice(0, 19) + ' 〜 ' + recordLib.formatLocalIso(rec.end).slice(11, 19)], ['記録ID', rec.id]];
     ctx.font = '400 28px ' + font;
-    info.forEach((r, i) => { ctx.fillStyle = '#6e767d'; ctx.fillText(r[0], pad, 156 + i * 42); ctx.fillStyle = '#151515'; ctx.fillText(String(r[1]), pad + 170, 156 + i * 42); });
+    info.forEach((r, i) => { ctx.fillStyle = '#6e767d'; ctx.fillText(r[0], pad, 156 + i * 42); ctx.fillStyle = '#151515'; ctx.fillText(String(r[1]), pad + 190, 156 + i * 42); });
     ctx.textAlign = 'right'; ctx.font = '400 26px ' + font; ctx.fillStyle = '#555'; ctx.fillText('得点', W - pad, 30);
     ctx.font = '700 84px ' + font; ctx.fillStyle = ok === rec.items.length ? '#14803a' : '#151515';
     ctx.fillText(ok + ' / ' + rec.items.length, W - pad, 60);
@@ -274,8 +261,7 @@
       ctx.fillStyle = '#555'; ctx.textAlign = 'right'; ctx.fillText(Number(it.elapsedSec).toFixed(1) + '秒', W - pad, y); ctx.textAlign = 'left';
       ctx.fillStyle = '#d8dce0'; ctx.fillRect(pad, top + (k + 1) * rowH - 2, W - pad * 2, 1);
     });
-    // 記録データ（大きく）と照合コード（小さく）。見出しは付けない
-    const qrTop = top + rec.items.length * rowH + 30;
+    const qrTop = top + rec.items.length * rowH + 30;   // 記録データ（大きく）と照合コード（小さく）。見出しは付けない
     drawQr(ctx, qr.recordText, pad - 8, qrTop, qrSize);
     drawQr(ctx, qr.checkText, W - pad - 340 + 8, qrTop, 340);
     return cv.toDataURL('image/png');
@@ -284,17 +270,14 @@
   $('home').onclick = () => { show('vHome'); syncHome(); };
 
   /* ---------- 外から使う口（電卓の「答に入れる」・自己テスト） ---------- */
-  window.App = {
-    setInput(v) { if (answered || !cur() || cur().answer.kind !== 'num') return; input = String(v).replace('−', '-'); showInput(); },
-    _st: st, _finish: finish, _next: next, _start: startQuiz, _cur: cur, _draw: () => drawVal,
-  };
+  window.App = { setInput(v) { if (answered || !cur() || cur().answer.kind !== 'num') return; input = String(v).replace('−', '-'); showInput(); } };
 
   renderHome();
 
-  /* ---------- 見本（画面の確認用）: ?demo=段[&fb=1 で 1 問目に答えた後の画面][&seed=たね] ---------- */
-  const dm = /[?&]demo=(\d)/.exec(location.search);
+  /* ---------- 見本（画面の確認用） ---------- */
+  const dm = /[?&]demo=([a-z]+)/.exec(location.search);
   if (dm) {
-    $('name').value = '見本'; st.level = +dm[1]; st.units = EGen.UNITS.map(u => u.id);
+    $('name').value = '見本'; st.format = dm[1]; st.units = EGen.UNITS.map(u => u.id);
     startQuiz();
     const sd = /[?&]q=(L\d[A-Za-z]+-[0-9a-f]+)/.exec(location.search);
     if (sd) { st.quiz.qs[0] = EGen.regen(sd[1]); renderQ(); }
@@ -309,7 +292,6 @@
     const E = Calc.evaluate;
     ok('四則', E('2×9.8×10') === 196); ok('ルート', E('√196') === 14); ok('2√2', Math.abs(E('2√2') - 2 * Math.SQRT2) < 1e-12);
     let err = ''; try { E('5÷0'); } catch (x) { err = x; } ok('0で割る', err === 'div0');
-    // 計算用紙
     $('bSheet').click(); await new Promise(r => setTimeout(r, 300));
     const cv = Pad._test.cv, r = cv.getBoundingClientRect();
     const fire = (t, x, y, type = 'pen') => cv.dispatchEvent(new PointerEvent(t, { pointerId: 7, pointerType: type, clientX: r.left + x, clientY: r.top + y, bubbles: true, cancelable: true, pressure: .5, buttons: t === 'pointerup' ? 0 : 1 }));
@@ -318,14 +300,17 @@
     fire('pointerdown', 60, 60, 'touch'); fire('pointermove', 120, 90, 'touch'); fire('pointerup', 120, 90, 'touch');
     ok('ペン使用後は指を無視', Pad.count() === 1);
     closeSheet();
-    // 各段を 1 回ずつ、全部正解で通す
+    // ホーム: お金だけ選ぶと「読む」以外は押せない
+    st.units = ['M']; syncHome();
+    ok('お金だけなら読むだけ', [...document.querySelectorAll('#formats button')].filter(b => !b.disabled).map(b => b.dataset.f).join() === 'read');
+    // 各出題形式を、全部の単元で 1 回ずつ全問正解で通す
     $('name').value = 'テスト';
-    for (let level = 1; level <= 5; level++) {
-      st.level = level; st.units = EGen.UNITS.map(u => u.id);
+    for (const f of EGen.FORMATS) {
+      st.format = f.id; st.units = EGen.UNITS.map(u => u.id);
       try {
         startQuiz();
         for (let i = 0; i < N_Q; i++) {
-          const q = cur(), a = q.answer;
+          const a = cur().answer;
           if (a.kind === 'draw') { Object.assign(drawVal, a.target); redrawDraw(); finish(drawVal); }
           else if (a.kind === 'choice') finish(a.correct);
           else { App.setInput(String(a.value)); finish(String(a.value)); }
@@ -333,10 +318,9 @@
         }
         const qr = await showResult();
         const v = await recordLib.verifyPair(qr.recordText, qr.checkText);
-        ok(`段${level} 全問正解で記録が本物`, v.ok && st.quiz.items.every(it => it.verdict === 'ok'));
-        const bad = qr.recordText.replace('score=10/10', 'score=9/10');
-        ok(`段${level} 書き換えを見抜く`, !(await recordLib.verifyPair(bad, qr.checkText)).ok);
-      } catch (e) { ok(`段${level} 例外 ${e.message}`, false); console.error(e); }
+        ok(`${f.name} 全問正解で記録が本物`, v.ok && st.quiz.items.every(it => it.verdict === 'ok'));
+        ok(`${f.name} 書き換えを見抜く`, !(await recordLib.verifyPair(qr.recordText.replace('score=10/10', 'score=9/10'), qr.checkText)).ok);
+      } catch (e) { ok(`${f.name} 例外 ${e.message}`, false); console.error(e); }
     }
     document.title = 'TEST ' + (out.every(s => s.startsWith('OK')) ? 'ALL OK' : 'FAIL') + ' | ' + out.join(' / ');
     document.body.dataset.test = document.title;
