@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>エネルギー棒グラフ 試作（計算用紙・電卓）</title>
+<style>
+:root{--bg:#fbfbf5;--fg:#111;--dim:#667;--line:#b9c0a8;--btn:#e4e8d8;--on:#1f6feb;--K:#1f5f8b;--Us:#2e8b57;--Ug:#c77d0a;--sum:#e05a78;--W:#d23;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+  font-family:"BIZ UDPGothic","Hiragino Sans","Noto Sans JP",sans-serif;touch-action:manipulation}
+body{overflow:hidden}
+#main{position:fixed;inset:0 0 72px 0;overflow:auto;padding:14px 18px 40px;-webkit-overflow-scrolling:touch}
+h1{font-size:20px;margin:0 0 6px}
+.lv{display:inline-block;background:#333;color:#fff;border-radius:6px;padding:1px 8px;font-size:14px;margin-right:6px}
+.q{font-size:19px;line-height:1.7;max-width:820px}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
+button{font:inherit;font-size:17px;font-weight:700;background:var(--btn);color:var(--fg);border:2px solid var(--line);
+  border-radius:10px;min-height:48px;min-width:48px;padding:4px 14px;cursor:pointer;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+button.on{background:var(--on);border-color:var(--on);color:#fff}
+button:active{filter:brightness(.9)}
+.ans{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0;font-size:19px}
+.ans input{font:inherit;font-size:22px;width:9em;padding:6px 8px;border:2px solid var(--line);border-radius:8px}
+.res{font-weight:700;min-height:1.6em;font-size:19px}
+.res.ok{color:#178a3a}.res.ng{color:#c22}
+.choices{display:flex;gap:12px;flex-wrap:wrap}
+.choice{border:3px solid var(--line);border-radius:12px;padding:4px;background:#fff;cursor:pointer}
+.choice.sel{border-color:var(--on)}
+svg text{font-family:inherit}
+/* 下のバー */
+#bar{position:fixed;left:0;right:0;bottom:0;height:72px;display:flex;gap:10px;justify-content:center;align-items:center;
+  background:#eef0e6;border-top:2px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+/* 計算用紙（下から出る） */
+#sheet{position:fixed;left:0;right:0;bottom:0;height:46vh;background:#fff;border-top:3px solid #888;
+  box-shadow:0 -6px 20px rgba(0,0,0,.18);transform:translateY(105%);transition:transform .2s;z-index:10;
+  display:flex;flex-direction:column}
+#sheet.open{transform:none}
+#sheet.dragging{transition:none}
+#grip{height:26px;display:flex;justify-content:center;align-items:center;cursor:ns-resize;touch-action:none;flex:none}
+#grip::before{content:"";width:70px;height:6px;border-radius:3px;background:#aaa}
+#tools{display:flex;gap:8px;padding:0 10px 6px;flex:none;align-items:center;flex-wrap:wrap}
+#tools .sp{flex:1}
+#tools .note{font-size:13px;color:var(--dim)}
+#padwrap{position:relative;flex:1;min-height:0;
+  background-image:linear-gradient(#e8eef5 1px,transparent 1px),linear-gradient(90deg,#e8eef5 1px,transparent 1px);background-size:28px 28px}
+#pad{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* 電卓（浮かぶ・動かせる） */
+#calc{position:fixed;right:16px;top:70px;width:300px;background:#2b2f33;color:#fff;border-radius:14px;padding:8px;
+  box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:20;display:none;touch-action:none;
+  -webkit-user-select:none;user-select:none}
+#calc.open{display:block}
+#calchead{display:flex;justify-content:space-between;align-items:center;padding:0 4px 6px;cursor:move;font-size:14px;color:#bbb}
+#calchead button{min-height:34px;min-width:34px;padding:0 8px;font-size:15px;background:#444;color:#fff;border-color:#555}
+#disp{background:#eef3e8;color:#111;border-radius:8px;padding:6px 10px;text-align:right;font-size:18px;min-height:64px;word-break:break-all}
+#disp .ex{color:#555;font-size:16px;min-height:1.3em}
+#disp .rv{font-size:26px;font-weight:700}
+#keys{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+#keys button{min-height:48px;padding:0;font-size:20px;background:#444;color:#fff;border-color:#555}
+#keys button.op{background:#5a6e8c}
+#keys button.eq{background:#e08a1e;border-color:#e08a1e}
+#keys button.wide{grid-column:span 2}
+</style>
+</head>
+<body>
+<div id="main">
+  <h1>エネルギー棒グラフ　試作（計算用紙と電卓の動作確認）</h1>
+  <div class="nav" id="nav"></div>
+  <div id="qbox"></div>
+</div>
+
+<div id="bar">
+  <button id="bSheet">✏️ 計算用紙</button>
+  <button id="bCalc">🧮 電卓</button>
+</div>
+
+<div id="sheet" aria-label="計算用紙">
+  <div id="grip" title="上下に動かして高さを変える"></div>
+  <div id="tools">
+    <button id="tPen" class="on">✒️ ペン</button>
+    <button id="tEra">🧽 消しゴム</button>
+    <button id="tUndo">↶ 戻す</button>
+    <button id="tClear">🗑 全部消す</button>
+    <span class="note" id="penNote">指でも書けます（ペンを使うと指は無視）</span>
+    <span class="sp"></span>
+    <button id="tClose">✕ 閉じる</button>
+  </div>
+  <div id="padwrap"><canvas id="pad"></canvas></div>
+</div>
+
+<div id="calc">
+  <div id="calchead"><span>⠿ 電卓（ここを持って動かす）</span><button id="cClose">✕</button></div>
+  <div id="disp"><div class="ex" id="dEx"></div><div class="rv" id="dRv">0</div></div>
+  <div id="keys"></div>
+</div>
+
+<script>
+'use strict';
+const cap=(el,id)=>{try{el.setPointerCapture(id);}catch(_){}};  // 取れないことがあっても描画は続ける
+/* ============ 問題（試作：レベルごとに 1 問ずつ） ============ */
+// 棒グラフ（ストックだけ）＋仕事は矢印（フロー）。棒の高さは J。
+function barSVG(before, after, work, opt={}){
+  // before/after: {K,Us,Ug} J。work: J（正=入る、負=出る、0/null=なし）
+  const W=520,H=230, base=180, scale=opt.scale||1.4, cols=['K','Us','Ug','sum'];
+  const name={K:'運動',Us:'ばね',Ug:'重力',sum:'合計'}, col={K:'var(--K)',Us:'var(--Us)',Ug:'var(--Ug)',sum:'var(--sum)'};
+  const g=(e,x0,label)=>{ e={...e}; e.sum=(e.K||0)+(e.Us||0)+(e.Ug||0); let s=`<text x="${x0+95}" y="20" text-anchor="middle" font-size="17" font-weight="700">${label}</text>`;
+    cols.forEach((c,i)=>{const x=x0+15+i*45, h=(e[c]||0)*scale;
+      s+=`<rect x="${x}" y="${base-h}" width="28" height="${h}" fill="${col[c]}"/>`;
+      if(opt.values!==false) s+=`<text x="${x+14}" y="${base-h-5}" text-anchor="middle" font-size="14">${opt.hide&&opt.hide.includes(label+c)?'?':(e[c]||0)+' J'}</text>`;
+      s+=`<text x="${x+14}" y="${base+18}" text-anchor="middle" font-size="13">${name[c]}</text>`;});
+    return s+`<line x1="${x0+5}" y1="${base}" x2="${x0+195}" y2="${base}" stroke="#333" stroke-width="2"/>`+
+      `<line x1="${x0+190-25}" y1="30" x2="${x0+190-25}" y2="${base}" stroke="#999" stroke-dasharray="4 3"/>`;};
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="${opt.w||W}" role="img">`+g(before,0,'まえ')+g(after,320,'あと');
+  if(work){const up=work>0, t=opt.hideW?'?':`${up?'+':''}${work} J`;
+    s+= up? `<path d="M225 60 h70 v30 h14 l-49 40 l-49 -40 h14 z" fill="#fde2e7" stroke="var(--W)" stroke-width="2"/><text x="260" y="82" text-anchor="middle" font-size="17" font-weight="700" fill="var(--W)">${t}</text><text x="260" y="152" text-anchor="middle" font-size="13">仕事をされた</text>`
+          : `<path d="M225 80 h70 v30 h14 l-49 40 l-49 -40 h14 z" fill="#e2ecfd" stroke="#2456b8" stroke-width="2"/><text x="260" y="102" text-anchor="middle" font-size="17" font-weight="700" fill="#2456b8">${t}</text><text x="260" y="60" text-anchor="middle" font-size="13">仕事をした（負の仕事）</text>`;}
+  else s+=`<text x="260" y="110" text-anchor="middle" font-size="26">→</text>`;
+  return s+'</svg>';
+}
+const Q=[
+ {id:'m1',lv:'Lv.1 お金',html:`太郎君ははじめ、財布に 0 円、貯金箱に 0 円。お小遣い 500 円をもらって財布に入れ、100 円のお菓子を買い、100 円を貯金箱に移した。<br>いま財布にはいくらありますか。`,ans:300,unit:'円'},
+ {id:'g1',lv:'Lv.2 グラフの値',html:`運動エネルギー 50 J で動いている台車に、30 J の仕事をした（台車<b>に</b>仕事をした）。あとの運動エネルギーは何 J か。<br>`+barSVG({K:50},{K:80},30,{hide:['あとK','あとsum']}),ans:80,unit:'J'},
+ {id:'d1',lv:'Lv.2 グラフの記入',type:'draw',html:`なめらかな水平面で、ばね（ばねのエネルギー 40 J）に押し付けた物体を放した。ばねから離れたあとの棒グラフを、棒を上下に動かして作ろう（1 目盛 10 J）。`},
+ {id:'s1',lv:'Lv.3 場面から選ぶ',type:'choice',html:`高さ 1 m から静かに落とした物体（物体と重力場の系）。地面に着く直前の棒グラフはどれ？（はじめ：重力 60 J）`,
+   choices:[barSVG({Ug:60},{K:60},0,{w:250,values:false}),barSVG({Ug:60},{K:30,Ug:30},0,{w:250,values:false}),barSVG({Ug:60},{K:60},60,{w:250,values:false})],ans:0,
+   why:['正解。重力による位置エネルギーがすべて運動エネルギーに変わり、合計は変わらない。','まだ半分の高さ（0.5 m）のとき。','系に「重力場」を入れたので、重力の仕事を外から足すと二重に数えてしまう。']},
+ {id:'c1',lv:'Lv.4 速さの計算',html:`質量 2.0 kg の物体を高さ 10 m から自由落下させた（g = 9.8 m/s²）。地面に達する直前の速さは何 m/s か。<br><span style="color:#667;font-size:16px">ヒント：まず棒グラフ → 重力 mgh → 運動 ½mv²</span>`,ans:14,unit:'m/s',tol:0.15},
+];
+let cur=0;
+function renderNav(){document.getElementById('nav').innerHTML=Q.map((q,i)=>`<button class="${i===cur?'on':''}" data-i="${i}">${i+1}</button>`).join('');}
+document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;go(+b.dataset.i);});
+function go(i){Pad.save(Q[cur].id);cur=i;renderNav();renderQ();Pad.load(Q[cur].id);}
+function renderQ(){
+  const q=Q[cur], box=document.getElementById('qbox');
+  let h=`<div class="q"><span class="lv">${q.lv}</span>${q.html}</div>`;
+  if(q.type==='choice'){h+=`<div class="choices">${q.choices.map((c,i)=>`<div class="choice" data-i="${i}">${'ABC'[i]}<br>${c}</div>`).join('')}</div><div class="res" id="res"></div>`;}
+  else if(q.type==='draw'){h+=`<div id="drawer"></div><div class="ans"><button id="chk">答え合わせ</button></div><div class="res" id="res"></div>`;}
+  else{h+=`<div class="ans"><input id="ai" inputmode="decimal" autocomplete="off" placeholder="答え"> ${q.unit}<button id="chk">答え合わせ</button></div><div class="res" id="res"></div>`;}
+  box.innerHTML=h;
+  const res=box.querySelector('#res');
+  if(q.type==='choice') box.querySelectorAll('.choice').forEach(el=>el.onclick=()=>{box.querySelectorAll('.choice').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');
+      const i=+el.dataset.i;res.className='res '+(i===q.ans?'ok':'ng');res.textContent=(i===q.ans?'⭕ ':'✖ ')+q.why[i];});
+  else if(q.type==='draw') DrawBars.mount(box.querySelector('#drawer'),res);
+  else box.querySelector('#chk').onclick=()=>{const v=parseFloat(box.querySelector('#ai').value.replace(/[，,]/g,'.').replace(/[０-９．]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)));
+      const ok=Math.abs(v-q.ans)<=(q.tol||1e-9);res.className='res '+(ok?'ok':'ng');res.textContent=isNaN(v)?'数を入れてください':ok?'⭕ 正解！':'✖ もう一度。棒グラフを描いてから考えよう';};
+}
+/* グラフの記入：棒をドラッグ（10 J 刻み） */
+const DrawBars={mount(el,res){
+  const st={K:0,Us:0,Ug:0}, step=10, sc=1.6, base=200, names={K:'運動',Us:'ばね',Ug:'重力'}, keys=['K','Us','Ug'];
+  el.innerHTML=`<svg id="dsvg" viewBox="0 0 520 240" width="520" style="touch-action:none;background:#fff;border:2px solid var(--line);border-radius:10px;max-width:100%"></svg>`;
+  const svg=el.querySelector('svg');
+  const draw=()=>{const before=barSVG({Us:40},{},0).match(/<rect[\s\S]*?<\/svg>/);
+    let s='';for(let j=0;j<=10;j++)s+=`<line x1="300" x2="510" y1="${base-j*step*sc/1}" y2="${base-j*step*sc/1}" stroke="#eee"/>`;
+    // まえ（固定）
+    s+=`<text x="100" y="20" text-anchor="middle" font-weight="700">まえ</text>`;
+    [['K',0],['Us',40],['Ug',0]].forEach(([k,v],i)=>{const x=20+i*55;s+=`<rect x="${x}" y="${base-v*sc}" width="34" height="${v*sc}" fill="var(--${k})"/><text x="${x+17}" y="${base+18}" text-anchor="middle" font-size="13">${names[k]}</text><text x="${x+17}" y="${base-v*sc-5}" text-anchor="middle" font-size="13">${v} J</text>`;});
+    s+=`<line x1="10" x2="190" y1="${base}" y2="${base}" stroke="#333" stroke-width="2"/><text x="245" y="120" text-anchor="middle" font-size="26">→</text>`;
+    s+=`<text x="400" y="20" text-anchor="middle" font-weight="700">あと（棒を動かす）</text>`;
+    keys.forEach((k,i)=>{const x=320+i*65,v=st[k];s+=`<rect data-k="${k}" x="${x-10}" y="30" width="54" height="${base-30}" fill="transparent"/><rect x="${x}" y="${base-v*sc}" width="34" height="${v*sc}" fill="var(--${k})" pointer-events="none"/><rect x="${x-4}" y="${base-v*sc-6}" width="42" height="10" rx="4" fill="#333" pointer-events="none"/><text x="${x+17}" y="${base+18}" text-anchor="middle" font-size="13">${names[k]}</text><text x="${x+17}" y="${base-v*sc-12}" text-anchor="middle" font-size="13">${v} J</text>`;});
+    s+=`<line x1="300" x2="510" y1="${base}" y2="${base}" stroke="#333" stroke-width="2"/>`;svg.innerHTML=s;};
+  let act=null;
+  const setFrom=e=>{const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(svg.getScreenCTM().inverse());
+    st[act]=Math.max(0,Math.min(100,Math.round((base-q.y)/sc/step)*step));draw();};
+  svg.addEventListener('pointerdown',e=>{const k=e.target.dataset&&e.target.dataset.k;if(!k)return;act=k;cap(svg,e.pointerId);setFrom(e);e.preventDefault();});
+  svg.addEventListener('pointermove',e=>{if(act)setFrom(e);});
+  const up=()=>{act=null;};svg.addEventListener('pointerup',up);svg.addEventListener('pointercancel',up);
+  draw();
+  document.getElementById('chk').onclick=()=>{const ok=st.K===40&&st.Us===0&&st.Ug===0;res.className='res '+(ok?'ok':'ng');
+    res.textContent=ok?'⭕ 正解！ばねのエネルギー 40 J がすべて運動エネルギーに変わった（合計は 40 J のまま）':(st.K+st.Us+st.Ug!==40?'✖ 合計が「まえ」と変わっています。外から仕事はされていないよ':'✖ ばねから離れたら、ばねは伸びも縮みもしていないよ');};
+}};
+
+/* ============ 計算用紙（手書き：黒ペンと消しゴムだけ） ============ */
+const Pad=(()=>{
+  const cv=document.getElementById('pad'), ctx=cv.getContext('2d'), wrap=document.getElementById('padwrap');
+  let strokes=[], undo=[], mode='pen', curS=null, curId=null, penSeen=false, store={};
+  const W=2.6, ER=14; // ペンの太さ・消しゴムの半径（CSS px）
+  function resize(){const r=wrap.getBoundingClientRect(), d=window.devicePixelRatio||1;
+    cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);redraw();}
+  function drawStroke(s){const p=s.p;ctx.strokeStyle='#111';ctx.lineWidth=W;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
+    if(p.length===1){ctx.arc(p[0][0],p[0][1],W/2,0,7);ctx.fillStyle='#111';ctx.fill();return;}
+    ctx.moveTo(p[0][0],p[0][1]);for(let i=1;i<p.length-1;i++){const mx=(p[i][0]+p[i+1][0])/2,my=(p[i][1]+p[i+1][1])/2;ctx.quadraticCurveTo(p[i][0],p[i][1],mx,my);}
+    const l=p[p.length-1];ctx.lineTo(l[0],l[1]);ctx.stroke();}
+  function redraw(){const r=wrap.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);strokes.forEach(drawStroke);if(curS)drawStroke(curS);}
+  const pos=e=>{const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top];};
+  function hit(s,x,y){return s.p.some(([a,b])=>(a-x)**2+(b-y)**2<ER*ER);}
+  function erase(x,y){const before=strokes.length, gone=strokes.filter(s=>hit(s,x,y));if(!gone.length)return;
+    strokes=strokes.filter(s=>!hit(s,x,y));undo.push({t:'erase',s:gone});redraw();}
+  let activeId=null;
+  function accept(e){ // ペンを一度でも使ったら、指（touch）は無視＝手のひらで線が出ない
+    if(e.pointerType==='pen'){if(!penSeen){penSeen=true;document.getElementById('penNote').textContent='ペンを検出：指・手のひらでは書きません';}return true;}
+    return !penSeen;}
+  cv.addEventListener('pointerdown',e=>{if(!accept(e)||activeId!==null)return;e.preventDefault();activeId=e.pointerId;cap(cv,e.pointerId);
+    const [x,y]=pos(e);if(mode==='pen'){curS={p:[[x,y]]};redraw();}else erase(x,y);});
+  cv.addEventListener('pointermove',e=>{if(e.pointerId!==activeId)return;e.preventDefault();
+    const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
+    for(const ev of (evs.length?evs:[e])){const [x,y]=pos(ev);if(mode==='pen'&&curS)curS.p.push([x,y]);else if(mode==='era')erase(x,y);}
+    if(mode==='pen')redraw();});
+  const end=e=>{if(e.pointerId!==activeId)return;activeId=null;if(curS){strokes.push(curS);undo.push({t:'add',s:[curS]});curS=null;redraw();}};
+  cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+  // iPad Safari：長押しの拡大鏡・選択・スクロールを止める
+  ['touchstart','touchmove'].forEach(t=>cv.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+  cv.addEventListener('contextmenu',e=>e.preventDefault());
+  new ResizeObserver(resize).observe(wrap);
+  return{
+    setMode(m){mode=m;cv.style.cursor=m==='era'?'cell':'crosshair';},
+    undo(){const u=undo.pop();if(!u)return;if(u.t==='add')strokes=strokes.filter(s=>!u.s.includes(s));else strokes.push(...u.s);redraw();},
+    clear(){if(!strokes.length)return;undo.push({t:'erase',s:strokes});strokes=[];redraw();},
+    save(id){store[id]={strokes,undo};},              // 問題ごとに計算用紙を分ける
+    load(id){const s=store[id]||{strokes:[],undo:[]};strokes=s.strokes;undo=s.undo;redraw();},
+    count(){return strokes.length;}, _test:{cv}
+  };
+})();
+const sheet=document.getElementById('sheet');
+document.getElementById('bSheet').onclick=()=>{sheet.classList.toggle('open');document.getElementById('bSheet').classList.toggle('on',sheet.classList.contains('open'));};
+document.getElementById('tClose').onclick=()=>{sheet.classList.remove('open');document.getElementById('bSheet').classList.remove('on');};
+const tPen=document.getElementById('tPen'),tEra=document.getElementById('tEra');
+tPen.onclick=()=>{Pad.setMode('pen');tPen.classList.add('on');tEra.classList.remove('on');};
+tEra.onclick=()=>{Pad.setMode('era');tEra.classList.add('on');tPen.classList.remove('on');};
+document.getElementById('tUndo').onclick=()=>Pad.undo();
+document.getElementById('tClear').onclick=()=>Pad.clear();
+// 高さを変える（つまみを上下）
+(()=>{const g=document.getElementById('grip');let y0=null,h0;
+  g.addEventListener('pointerdown',e=>{y0=e.clientY;h0=sheet.getBoundingClientRect().height;g.setPointerCapture(e.pointerId);sheet.classList.add('dragging');});
+  g.addEventListener('pointermove',e=>{if(y0===null)return;const h=Math.max(160,Math.min(window.innerHeight-60,h0+(y0-e.clientY)));sheet.style.height=h+'px';});
+  const up=()=>{y0=null;sheet.classList.remove('dragging');};g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up);})();
+
+/* ============ 電卓（四則・ルート・かっこ） ============ */
+const Calc=(()=>{
+  let ex='', last=null;
+  const K=[['7','8','9','÷','⌫'],['4','5','6','×','C'],['1','2','3','−','√'],['0','.','(',')','+'],['x²','答を入れる','=']];
+  const keys=document.getElementById('keys');
+  keys.innerHTML=K.flat().map(k=>`<button class="${'÷×−+'.includes(k)&&k.length===1?'op':k==='='?'eq wide':k==='答を入れる'?'wide':''}" data-k="${k}" style="${k==='答を入れる'?'font-size:15px':''}">${k}</button>`).join('');
+  // 安全な式の計算（eval を使わない）。√ は直後の数・かっこにかかる
+  function evaluate(s){let i=0;const t=s.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-').replace(/²/g,'^2');
+    const peek=()=>t[i], eat=c=>{if(t[i]===c){i++;return true;}return false;};
+    function num(){let j=i;while(/[0-9.]/.test(t[i]||''))i++;if(j===i)throw 0;const v=parseFloat(t.slice(j,i));if(isNaN(v))throw 0;return v;}
+    function atom(){if(eat('(')){const v=expr();eat(')');return v;}if(eat('√')){const v=power();if(v<0)throw 'neg';return Math.sqrt(v);}if(eat('-'))return -power();return num();}
+    function power(){let v=atom();while(eat('^')){v=Math.pow(v,atom());}return v;}
+    function term(){let v=power();for(;;){if(eat('*'))v*=power();else if(eat('/')){const d=power();if(d===0)throw 'div0';v/=d;}
+      else if(peek()==='('||peek()==='√')v*=power();else return v;}}  // 2√3 や 2(3+1) も掛け算
+    function expr(){let v=term();for(;;){if(eat('+'))v+=term();else if(eat('-'))v-=term();else return v;}}
+    const v=expr();if(i!==t.length)throw 0;return v;}
+  const fmt=v=>{if(!isFinite(v))return'エラー';const r=Math.round(v*1e10)/1e10;return String(Math.abs(r)>=1e9||Math.abs(r)<1e-6&&r!==0?r.toExponential(6):r);};
+  const show=(rv)=>{document.getElementById('dEx').textContent=ex;document.getElementById('dRv').textContent=rv!==undefined?rv:(ex||'0');};
+  keys.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.k;
+    if(k==='C'){ex='';last=null;show();return;}
+    if(k==='⌫'){ex=ex.slice(0,-1);show();return;}
+    if(k==='='){try{last=evaluate(ex);show(fmt(last));}catch(err){show(err==='div0'?'0 では割れません':err==='neg'?'√ の中が負':'式を確かめて');}return;}
+    if(k==='x²'){ex+='²';show();return;}
+    if(k==='答を入れる'){const a=document.getElementById('ai');if(a&&last!==null){a.value=fmt(last);}return;}
+    if(last!==null&&/[0-9.√(]/.test(k)&&document.getElementById('dRv').textContent!==ex){ex='';} // 計算後に数字を押したら新しい式
+    last=null;ex+=k;show();});
+  return{evaluate,fmt};
+})();
+document.getElementById('bCalc').onclick=()=>{const c=document.getElementById('calc');c.classList.toggle('open');document.getElementById('bCalc').classList.toggle('on',c.classList.contains('open'));};
+document.getElementById('cClose').onclick=()=>{document.getElementById('calc').classList.remove('open');document.getElementById('bCalc').classList.remove('on');};
+(()=>{const c=document.getElementById('calc'),h=document.getElementById('calchead');let o=null;
+  h.addEventListener('pointerdown',e=>{if(e.target.tagName==='BUTTON')return;const r=c.getBoundingClientRect();o=[e.clientX-r.left,e.clientY-r.top];h.setPointerCapture(e.pointerId);});
+  h.addEventListener('pointermove',e=>{if(!o)return;c.style.left=Math.max(0,Math.min(innerWidth-60,e.clientX-o[0]))+'px';c.style.top=Math.max(0,Math.min(innerHeight-60,e.clientY-o[1]))+'px';c.style.right='auto';});
+  const up=()=>o=null;h.addEventListener('pointerup',up);h.addEventListener('pointercancel',up);})();
+
+renderNav();renderQ();
+if(location.search.includes('calc'))document.getElementById('bCalc').click();
+{const m=location.search.match(/q=(\d)/);if(m)go(+m[1]);}
+
+/* ============ 自己テスト（?test を付けて開くと、結果をタイトルに出す） ============ */
+if(location.search.includes('test')){
+  const out=[];const ok=(n,c)=>out.push((c?'OK ':'NG ')+n);
+  const E=Calc.evaluate;
+  ok('四則',E('2×9.8×10')===196); ok('割り算',Math.abs(E('1÷3')-1/3)<1e-12); ok('ルート',E('√196')===14);
+  ok('2√2',Math.abs(E('2√2')-2*Math.SQRT2)<1e-12); ok('かっこ',E('(16−8)×2')===16); ok('二乗',Math.abs(E('0.2²×25÷2')-0.5)<1e-12&&Calc.fmt(E('0.2²×25÷2'))==='0.5');
+  ok('優先順位',E('2+3×4')===14); ok('負の数',E('−3+5')===2);
+  let err='';try{E('5÷0');}catch(x){err=x;} ok('0で割る',err==='div0');
+  // 手書き：ポインタを合成して線を引く → 1 本、消しゴム → 0 本、戻す → 1 本
+  document.getElementById('bSheet').click();
+  setTimeout(()=>{const cv=Pad._test.cv,r=cv.getBoundingClientRect();
+    const fire=(t,x,y,type='pen')=>cv.dispatchEvent(new PointerEvent(t,{pointerId:7,pointerType:type,clientX:r.left+x,clientY:r.top+y,bubbles:true,cancelable:true,pressure:.5,buttons:t==='pointerup'?0:1}));
+    fire('pointerdown',40,40);for(let i=1;i<=20;i++)fire('pointermove',40+i*8,40+i*3);fire('pointerup',200,100);
+    ok('ペンで1本',Pad.count()===1);
+    fire('pointerdown',60,60,'touch');fire('pointermove',120,90,'touch');fire('pointerup',120,90,'touch');
+    ok('ペン使用後は指を無視',Pad.count()===1);
+    document.getElementById('tEra').click();fire('pointerdown',120,70);fire('pointerup',120,70);ok('消しゴム',Pad.count()===0);
+    Pad.undo();ok('戻す',Pad.count()===1);
+    go(1);ok('問題ごとに別の用紙',Pad.count()===0);go(0);ok('戻ると残っている',Pad.count()===1);
+    document.title='TEST '+(out.every(s=>s.startsWith('OK'))?'ALL OK':'FAIL')+' | '+out.join(' / ');
+    document.body.dataset.test=document.title;},400);
+}
+</script>
+</body>
+</html>
