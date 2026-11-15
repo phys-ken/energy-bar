@@ -46,11 +46,10 @@ button.on { background: var(--on); border-color: var(--on); color: #fff; }
 #timerBar.low { background: var(--ng); }
 .ttxt { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 2.6em; text-align: right; }
 .tool { min-height: 40px; min-width: 40px; padding: 2px 8px; font-size: 16px; }
-@media (max-width: 560px) { .tool .lbl, #qFormat { display: none; } .qtop { gap: 6px; padding-left: 8px; padding-right: 8px; } }
+@media (max-width: 560px) { .tool .lbl { display: none; } .qtop { gap: 6px; padding-left: 8px; padding-right: 8px; } }
 /* 1 本の流れ: 問題文＋問い → 図 → 答える欄（→ 正誤と解説）。横長の画面でも 1 列で、図だけ横に並べる */
 .qscroll { overflow: auto; -webkit-overflow-scrolling: touch; padding: 12px 14px 40px; }
 .qcard { max-width: 980px; margin: 0 auto; }
-.sys { display: inline-block; font-weight: 700; font-size: 15px; border: 2px solid #333; border-radius: 6px; padding: 0 8px; margin-right: 8px; vertical-align: 1px; }
 .qtext { font-size: 18px; line-height: 1.75; margin: 0 0 8px; }
 /* 問いは太字にしない（画面がガチャガチャする。先生の指摘 2026-11-16）。改行して同じ大きさで続ける */
 .qtext .ask { display: block; margin-top: 4px; font-weight: 400; }

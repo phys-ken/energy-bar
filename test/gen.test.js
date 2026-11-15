@@ -66,6 +66,9 @@ for (const f of G.FORMATS) for (const u of units) {
     }
     // 問題文と問いにはカッコを使わない（条件や図の説明は独立した文に。先生の指摘 2026-11-16）
     if (/[（）()]/.test(q.text + q.ask + (q.sys || ''))) bad(q, 'カッコがある: ' + q.text + ' / ' + q.ask);
+    // 系は問題文の 1 文として書く（札にしない。先生の指摘 2026-11-16）
+    if (!q.sys || !q.text.includes(`${q.sys}を系とする。`)) bad(q, '問題文に系が書かれていない: ' + q.text);
+    if (/。 /.test(q.text)) bad(q, '文の切れ目に半角の空白: ' + q.text);
     const all = q.text + q.ask + q.explain.join('') + (a.why ? a.why.join('') : '');
     if (/undefined|NaN/.test(all)) bad(q, '文に undefined/NaN: ' + q.text + q.ask);
     const m = NG_WORDS.exec(all); if (m) bad(q, `使わない言葉「${m[0]}」: ` + all.slice(Math.max(0, m.index - 15), m.index + 15));

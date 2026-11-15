@@ -67,8 +67,6 @@
     const qz = st.quiz, q = cur();
     answered = false; input = ''; drawVal = null;
     $('qNum').textContent = `${qz.i + 1} / ${qz.qs.length}`;
-    $('qSys').textContent = q.sys ? `系：${q.sys}` : '';
-    $('qSys').classList.toggle('hidden', !q.sys);
     $('qText').innerHTML = q.text;
     $('qAsk').innerHTML = q.ask;
     $('qScene').innerHTML = q.scene ? EScene.scene(q.scene, { theme: 'color' }) : '';

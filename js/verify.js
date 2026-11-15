@@ -83,7 +83,7 @@ const verifier = {
       let q = null; try { q = EGen.regen(it.qid); } catch (_) {}
       const v = it.verdict === 'ok' ? '<span class="ok">正解</span>' : it.verdict === 'timeout' ? '<span class="ng">時間切れ</span>' : '<span class="ng">不正解</span>';
       h += `<div class="qd"><div class="t"><b>問${k + 1}</b>　${v}　${this.esc(it.sec)}<br><code>${this.esc(it.qid)}</code><br>入れた答え <b>${this.esc(this.showAns(q, it.input))}</b>／正解 <b>${this.esc(this.showAns(q, it.ans))}</b>`;
-      if (q) h += `<p>${q.sys ? '系：' + this.esc(q.sys) + '<br>' : ''}${q.text}<br><b>${q.ask}</b></p>`;
+      if (q) h += `<p>${q.text}<br><b>${q.ask}</b></p>`;
       h += `</div><div>`;
       if (q && q.scene) h += EScene.scene(q.scene);
       if (q && q.chart) h += EBar.chart(q.chart.states, Object.assign({}, q.chart.opt, { theme: 'color' }));
