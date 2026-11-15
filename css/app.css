@@ -52,7 +52,8 @@ button.on { background: var(--on); border-color: var(--on); color: #fff; }
 .qcard { max-width: 980px; margin: 0 auto; }
 .sys { display: inline-block; font-weight: 700; font-size: 15px; border: 2px solid #333; border-radius: 6px; padding: 0 8px; margin-right: 8px; vertical-align: 1px; }
 .qtext { font-size: 18px; line-height: 1.75; margin: 0 0 8px; }
-.qtext .ask { display: block; margin-top: 4px; font-size: 19px; }
+/* 問いは太字にしない（画面がガチャガチャする。先生の指摘 2026-11-16）。改行して同じ大きさで続ける */
+.qtext .ask { display: block; margin-top: 4px; font-weight: 400; }
 .figs { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: flex-start; margin-bottom: 10px; }
 .figs .scene { flex: 0 1 auto; max-width: 100%; }
 .figs .chart { flex: 1 1 340px; max-width: 560px; }

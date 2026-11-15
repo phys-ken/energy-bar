@@ -47,8 +47,25 @@ for (const f of G.FORMATS) for (const u of units) {
     if (u !== 'M' && !q.scene) bad(q, '場面の図がない');
     if (q.scene) {
       const svg = S.scene(q.scene); if (/NaN|undefined/.test(svg)) bad(q, '場面の図がこわれている');
+      // 水平の動きは左から右だけ（先生の指摘 2026-11-16）: 水平の速さの矢印は右向き、水平の動きの線は右へ動く物体のもの
+      for (const it of q.scene.items) {
+        if (it.t === 'vel' && Math.abs(it.y1 - it.y2) < 1e-6 && !(it.x2 > it.x1)) bad(q, '水平の速さの矢印が左向き');
+        if (it.t === 'motion' && it.uy === 0 && !(it.ux > 0)) bad(q, '左へ動く物体がある');
+      }
+      // 残像の線の長さ: 棒グラフの問題では、速いほう（運動エネルギーが大きいほう）の線が長い
+      if (q.level !== 5 && q.chart) {
+        const st = q.chart.states, KA = st[0].K || 0, KB = st[1].K || 0;
+        const m = q.scene.items.filter(it => it.t === 'motion' && it.role);
+        for (const it of m) {
+          if (!(it.spd >= 0 && it.spd <= 1)) bad(q, '残像の線の速さの比がない');
+          const want = Math.sqrt((it.role === 'A' ? KA : KB) / Math.max(KA, KB));
+          if (Math.abs(it.spd - want) > 1e-9) bad(q, `残像の線の長さが速さと合わない ${it.role} ${it.spd} ${want}`);
+        }
+      }
       if (q.scene.items.some(it => it.label && NG_WORDS.test(it.label))) bad(q, '図の中に「まえ・あと」');
     }
+    // 問題文と問いにはカッコを使わない（条件や図の説明は独立した文に。先生の指摘 2026-11-16）
+    if (/[（）()]/.test(q.text + q.ask + (q.sys || ''))) bad(q, 'カッコがある: ' + q.text + ' / ' + q.ask);
     const all = q.text + q.ask + q.explain.join('') + (a.why ? a.why.join('') : '');
     if (/undefined|NaN/.test(all)) bad(q, '文に undefined/NaN: ' + q.text + q.ask);
     const m = NG_WORDS.exec(all); if (m) bad(q, `使わない言葉「${m[0]}」: ` + all.slice(Math.max(0, m.index - 15), m.index + 15));

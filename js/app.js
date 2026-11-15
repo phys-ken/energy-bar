@@ -195,7 +195,8 @@
       if (!ok && value != null) h += `<p><b>${'ABC'[value]}</b>：${a.why[value]}</p>`;
       h += `<p><b>${'ABC'[a.correct]}</b>：${a.why[a.correct].replace(/^正解。/, '')}</p>`;
     } else h += `<ul>${q.explain.map(s => `<li>${s}</li>`).join('')}</ul>`;
-    if (q.explainChart && a.kind !== 'choice') h += `<div class="fbchart">${chartSVG(q.explainChart, { fs: 5.0 })}</div>`;
+    // 答えの棒グラフは、図を増やさずに同じ場所の図を入れ替える（問題の図か解答の図か分からなくならないように。先生の指摘 2026-11-16）
+    if (q.explainChart && a.kind !== 'choice') { $('qChart').className = 'chart'; $('qChart').innerHTML = chartSVG(q.explainChart); }
     const last = st.quiz.i === st.quiz.qs.length - 1;
     h += `<button type="button" class="big primary next" id="next">${last ? '結果を見る' : '次へ'}</button>`;
     $('answerArea').classList.add('hidden');
