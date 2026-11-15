@@ -66,7 +66,6 @@
   function renderQ() {
     const qz = st.quiz, q = cur();
     answered = false; input = ''; drawVal = null;
-    $('qFormat').innerHTML = `<span class="lbl">${qz.format.name}</span>`;
     $('qNum').textContent = `${qz.i + 1} / ${qz.qs.length}`;
     $('qSys').textContent = q.sys ? `系：${q.sys}` : '';
     $('qSys').classList.toggle('hidden', !q.sys);
