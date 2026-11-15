@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>回答記録の確認（先生用）｜エネルギー棒グラフ 演習</title>
+<style>
+  body { font-family: "BIZ UDPGothic", "Hiragino Sans", "Noto Sans JP", Meiryo, sans-serif; color: #1a1a1c; margin: 0; padding: 20px; line-height: 1.6; font-size: 15px; }
+  main { max-width: 1150px; margin: 0 auto; }
+  h1 { font-size: 1.25rem; margin: 0 0 6px; }
+  h2 { font-size: 1rem; margin: 26px 0 8px; border-bottom: 2px solid #1a1a1c; padding-bottom: 4px; }
+  .note { color: #4d5358; font-size: .86rem; }
+  .drop { border: 2px dashed #9ea6b0; padding: 18px; text-align: center; margin: 12px 0; border-radius: 3px; }
+  table { border-collapse: collapse; width: 100%; font-size: .84rem; }
+  th, td { border: 1px solid #d8dce0; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #f4f6f8; }
+  tr.rec { cursor: pointer; } tr.rec:hover { background: #f7f9fc; }
+  .ok { color: #0e6245; font-weight: 700; } .ng { color: #b91c1c; font-weight: 700; } .warn { color: #9a5b00; font-weight: 700; }
+  textarea { width: 100%; height: 150px; font-family: monospace; font-size: .8rem; box-sizing: border-box; }
+  button { font: inherit; padding: 6px 14px; cursor: pointer; }
+  code { background: #f4f6f8; padding: 0 4px; }
+  pre { background: #f4f6f8; padding: 10px; font-size: .8rem; white-space: pre-wrap; }
+  .detail { border: 2px solid #9ea6b0; border-radius: 6px; padding: 10px 14px; margin: 12px 0; }
+  .qd { border-top: 1px solid #d8dce0; padding: 10px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .qd svg { width: 100%; height: auto; max-width: 460px; display: block; }
+  .qd .t { font-size: .9rem; }
+  @media (max-width: 800px) { .qd { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>回答記録の確認（先生用）</h1>
+  <div class="note">生徒が提出した「回答記録」の画像を読み込むと、2 つの QR コードを照合して本物かどうかを判定します。画像はこのブラウザの中だけで処理し、どこにも送りません。</div>
+
+  <h2>1. 画像から確認する</h2>
+  <div class="drop">
+    <input type="file" id="file-input" accept="image/*" multiple>
+    <div class="note">複数の画像をまとめて選べます。まとめて読み込むと、同じ記録が 2 回以上提出されていないかも確認します。</div>
+  </div>
+  <div id="summary" class="note"></div>
+  <p><button type="button" id="csv-btn" hidden>一覧を CSV で保存</button></p>
+  <table id="result-table" hidden>
+    <thead><tr><th>画像</th><th>判定</th><th>名前</th><th>段・単元</th><th>得点</th><th>回答日時</th><th>記録ID</th><th>理由・注意</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="note">行を押すと、その生徒が解いた 10 問（同じ問題を作り直したもの）と答えを下に出します。</div>
+  <div id="detail"></div>
+
+  <h2>2. QR の中身を貼り付けて確認する</h2>
+  <div class="note">QR を別のアプリで読み取った場合は、その文字列をそれぞれ貼り付けてください。</div>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px;">
+    <div><div>① 記録データ</div><textarea id="paste-record"></textarea></div>
+    <div><div>② 照合コード</div><textarea id="paste-check"></textarea></div>
+  </div>
+  <button type="button" id="paste-verify-btn" style="margin-top:8px;">照合する</button>
+  <pre id="paste-result" hidden></pre>
+
+  <h2>判定のしかた</h2>
+  <div class="note">
+    <p>① 記録データの QR には、名前・段と単元・日時・得点・各問題（問題の種類とたね・入れた答え・正解・正誤・秒数）と、<code>salt=</code>（ソルト）が入っています。② 照合コードの QR には、同じ記録 ID と <code>sha256=</code> が入っています。</p>
+    <p><code>sha256</code> が「ソルト ＋ 改行 ＋ ①の 1 行目から最後の q 行まで」の SHA-256 と一致し、記録 ID が①と②で同じなら「本物」と判定します。①の中身（得点や名前）を書き換えると、②と一致しなくなります。</p>
+    <p>問題は「種類とたね」から同じものを作り直せるので、どの問題をどう間違えたかを図つきで見られます。同じ記録 ID の画像が複数ある場合は、他人の記録の使い回しが疑われます。</p>
+  </div>
+</main>
+<script src="vendor/jsQR.js"></script>
+<script src="lib/ebar.js"></script>
+<script src="lib/scene.js"></script>
+<script src="lib/gen.js"></script>
+<script src="js/record.js"></script>
+<script src="js/verify.js"></script>
+</body>
+</html>
