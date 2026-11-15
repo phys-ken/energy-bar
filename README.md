@@ -25,9 +25,10 @@
 - 生成器: `node test/gen.test.js` … 全種類を 300 回ずつ作り、作り直し・正誤判定・刻み・図の崩れ・使わない言葉を調べる（`NG 0`）
 - アプリ: ローカルで `python3 -m http.server 8765 --bind 127.0.0.1` を立て、
   `google-chrome --headless=new --virtual-time-budget=15000 --dump-dom "http://127.0.0.1:8765/index.html?test"` の `data-test` が `TEST ALL OK`
-  （電卓・計算用紙・5 段それぞれ全問正解で記録が本物になるか・書き換えを見抜くか）
+  （電卓・計算用紙・お金だけなら「読む」だけ・4 つの出題形式それぞれ全問正解で記録が本物になるか・書き換えを見抜くか）
 - 先生用ページ: 同じく `verify.html?test`
-- 画面の確認: `index.html?demo=段&q=種類-たね[&fb=1]` で、その問題（答えた後の画面）を出す
+- 画面の確認: `index.html?demo=read|draw|choose|calc&q=種類-たね[&fb=1]` で、その問題（答えた後の画面）を出す
+- 生成器の検査は「まえ」「あと」「段」などの使わない言葉と、図の入れ忘れも調べる
 
 ## 罠
 
