@@ -12,7 +12,7 @@
 <section id="vHome" class="view">
   <div class="home">
     <h1>エネルギー棒グラフ 演習</h1>
-    <p class="lead">1 回 10 問。時間内に答えましょう。10 問すべて正解で「クリア」です。</p>
+    <p class="lead">1 回 10 問。チャレンジは時間内に 10 問すべて正解で「クリア」です。</p>
 
     <label class="field"><span>ニックネーム <span class="warnnote">本名は入れないでください</span></span>
       <input id="name" maxlength="16" autocomplete="off" placeholder="ニックネーム">
@@ -24,7 +24,10 @@
     <h2>2. 出題形式を選ぶ</h2>
     <div id="formats" class="levels"></div>
 
-    <button id="start" class="big primary" type="button">はじめる</button>
+    <div class="startrow">
+      <button id="practice" class="big" type="button">練習<span class="t">時間なし・記録なし</span></button>
+      <button id="start" class="big primary" type="button">チャレンジ<span class="t">時間あり・記録を出す</span></button>
+    </div>
     <p id="homeMsg" class="msg"></p>
   </div>
 </section>
@@ -55,13 +58,14 @@
     <div id="rScore" class="rscore"></div>
     <div id="rClear" class="clear hidden">クリア</div>
     <ol id="rList" class="rlist"></ol>
-    <div class="record">
+    <div class="record" id="rRecord">
       <img id="recordImg" alt="回答記録の画像">
       <a id="recordDl" class="big primary" href="#" download="回答記録.png">画像を保存</a>
       <p class="dim">保存した画像を Classroom に提出してください。保存できないときは、画像を長押しして保存するか、画面のスクリーンショットを撮ってください。</p>
     </div>
     <div class="row">
       <button id="again" class="big" type="button">もう一度（同じ単元・出題形式）</button>
+      <button id="toChallenge" class="big primary hidden" type="button">同じ単元・出題形式でチャレンジ</button>
       <button id="home" class="big" type="button">はじめの画面へ</button>
     </div>
   </div>

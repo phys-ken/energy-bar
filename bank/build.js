@@ -92,12 +92,12 @@ function toItem({ id, qid }) {
     c.opt.works = [{ blank: true }];       // 仕事がない場面でも欄は同じ（欄の有無で答えが分からないように）
     figs.push(PNG(`${id}_chart`, chartSVG(c)));
     const t1 = q.chart.states[1].title;
-    it.stem = `${q.text}\n「${t1}」の棒グラフをかき、仕事があれば、その矢印と値をかけ。1 目盛りは 10 J である。`;
+    it.stem = `${q.text}\n${/^図[AB]$/.test(t1) ? t1 : `「${t1}」`}の棒グラフをかき、仕事があれば、その矢印と値をかけ。1 目盛りは 10 J である。`;
     const ex = JSON.parse(JSON.stringify(q.explainChart));
     if (ex.opt.works[0]) ex.opt.works[0].answer = true;
     it.answer_figures = [PNG(`${id}_ans`, chartSVG(ex))];
     const t = a.target, w = q.explainChart.opt.works[0];
-    it.rubric = `棒: 運動 ${t.K} J・ばね ${t.Us} J・重力 ${t.Ug} J・合計 ${t.K + t.Us + t.Ug} J。` +
+    it.rubric = `棒: 運動 ${t.K} J・ばね ${t.Us} J・重力 ${t.Ug} J・力学的エネルギー ${t.K + t.Us + t.Ug} J。` +
       (w ? `矢印: ${w.W > 0 ? '系に入る下向き' : '系から出る上向き'}、${w.W > 0 ? '+' : '−'}${Math.abs(w.W)} J。` : '矢印: かかない（仕事なし）。');
   } else if (q.level === 4) {              // 場面から選ぶ
     it.type = 'choice';

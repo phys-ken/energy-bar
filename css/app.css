@@ -32,7 +32,11 @@ button.on { background: var(--on); border-color: var(--on); color: #fff; }
 .units label.on { border-color: var(--on); }
 .units input { width: 24px; height: 24px; }
 .units.off { opacity: .4; pointer-events: none; }
-#start { width: 100%; margin-top: 24px; }
+.startrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 24px; }
+.startrow button { flex-direction: column; gap: 2px; padding: 6px 8px; }
+.startrow button .t { font-size: 13px; font-weight: 400; opacity: .85; }
+/* 練習は時間なし: 時間の棒を出さない */
+.qtop.practice .timer, .qtop.practice .ttxt { visibility: hidden; }
 .msg { color: var(--ng); font-weight: 700; min-height: 1.4em; }
 @media (min-width: 700px) { .levels, .units { grid-template-columns: 1fr 1fr; } }
 
@@ -90,6 +94,10 @@ button:disabled { opacity: .35; cursor: default; }
 .feedback ul { margin: 4px 0 6px; padding-left: 1.2em; }
 .fbchart { margin: 4px 0 8px; }
 .feedback .next { width: 100%; margin-top: 4px; }
+/* 間違えたとき: 「最初からやり直す」と「次へ」を並べる */
+.fbbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+.fbbtns .next { margin-top: 0; }
+.fbbtns button { padding: 6px 8px; }
 
 
 /* 結果 */

@@ -41,24 +41,28 @@
   }
   $('units').addEventListener('change', () => { st.units = [...document.querySelectorAll('#units input:checked')].map(i => i.value); syncHome(); });
   $('formats').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; st.format = b.dataset.f; syncHome(); });
-  $('start').onclick = () => {
+  // 練習（時間なし・記録なし）とチャレンジ（時間あり・記録を出す）。先生の決定 2026-11-16
+  $('start').onclick = () => begin(false);
+  $('practice').onclick = () => begin(true);
+  function begin(practice) {
     const name = $('name').value.trim();
     if (!name) { $('homeMsg').textContent = 'ニックネームを入れてください（本名は入れないでください）。'; $('name').focus(); return; }
     if (!st.units.length) { $('homeMsg').textContent = '単元を 1 つ以上選んでください。'; return; }
     if (!okFormats().includes(st.format)) { $('homeMsg').textContent = '出題形式を選んでください。'; return; }
     $('homeMsg').textContent = '';
     localStorage.setItem(LS.name, name); localStorage.setItem(LS.format, st.format); localStorage.setItem(LS.units, JSON.stringify(st.units));
-    startQuiz();
-  };
+    startQuiz(practice);
+  }
 
   function show(view) { ['vHome', 'vQuiz', 'vResult'].forEach(v => $(v).classList.toggle('hidden', v !== view)); }
 
   /* ---------- 10 問 ---------- */
-  function startQuiz() {
+  function startQuiz(practice) {
     const f = EGen.fmtOf(st.format);
-    st.quiz = { format: f, units: st.units.slice(), limit: f.time, qs: EGen.quiz(f.n, st.units, N_Q), i: 0, items: [],
+    st.quiz = { format: f, units: st.units.slice(), limit: f.time, practice: !!practice, qs: EGen.quiz(f.n, st.units, N_Q), i: 0, items: [],
       id: recordLib.newRecordId(), start: new Date(), name: $('name').value.trim() };
-    Pad.reset(); Calc.clear();
+    Pad.reset(); Calc.clear(); closeSheet(); Calc.close();
+    document.querySelector('.qtop').classList.toggle('practice', !!practice);
     show('vQuiz');
     renderQ();
   }
@@ -160,6 +164,7 @@
   /* 時間 */
   function startTimer() {
     stopTimer(); t0 = performance.now();
+    if (st.quiz.practice) return;   // 練習は時間なし（かかった秒数だけ数える）
     const lim = st.quiz.limit * 1000, bar = $('timerBar'), txt = $('timerTxt');
     const tick = () => {
       const left = Math.max(0, lim - (performance.now() - t0));
@@ -176,7 +181,7 @@
   function finish(value, timedOut) {
     if (answered) return;
     answered = true; stopTimer();
-    const qz = st.quiz, q = cur(), elapsed = Math.min(qz.limit, (performance.now() - t0) / 1000);
+    const qz = st.quiz, q = cur(), sec = (performance.now() - t0) / 1000, elapsed = qz.practice ? sec : Math.min(qz.limit, sec);
     const ok = !timedOut && EGen.check(q, q.answer.kind === 'num' ? String(value) : value);
     qz.items.push({ qid: q.qid, input: timedOut ? '-' : EGen.fmtIn(q, value), ans: EGen.fmtAns(q), verdict: timedOut ? 'timeout' : (ok ? 'ok' : 'ng'), elapsedSec: elapsed });
     Pad.save('q' + qz.i);
@@ -209,11 +214,14 @@
     // 答えの棒グラフは、図を増やさずに同じ場所の図を入れ替える（問題の図か解答の図か分からなくならないように。先生の指摘 2026-11-16）
     if (q.explainChart && a.kind !== 'choice') { $('qChart').className = 'chart'; $('qChart').innerHTML = chartSVG(q.explainChart); }
     const last = st.quiz.i === st.quiz.qs.length - 1;
-    h += `<button type="button" class="big primary next" id="next">${last ? '結果を見る' : '次へ'}</button>`;
+    const nextBtn = `<button type="button" class="big primary next" id="next">${last ? '結果を見る' : '次へ'}</button>`;
+    // 間違えたら、最後まで解かずに最初からやり直せる（先生の決定 2026-11-16）
+    h += ok ? nextBtn : `<div class="fbbtns"><button type="button" class="big" id="retry">最初からやり直す</button>${nextBtn}</div>`;
     $('answerArea').classList.add('hidden');
     $('feedback').innerHTML = h; $('feedback').classList.remove('hidden');
     $('feedback').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     $('next').onclick = next;
+    if (!ok) $('retry').onclick = () => startQuiz(st.quiz.practice);
   }
   function next() {
     const qz = st.quiz;
@@ -230,11 +238,15 @@
     const qz = st.quiz, ok = qz.items.filter(it => it.verdict === 'ok').length;
     show('vResult');
     $('rScore').textContent = `${ok} / ${qz.items.length}`;
-    $('rClear').classList.toggle('hidden', ok !== qz.items.length);
+    $('rClear').classList.toggle('hidden', qz.practice || ok !== qz.items.length);
+    // 練習は記録の画像を出さない（提出はチャレンジだけ）
+    $('rRecord').classList.toggle('hidden', qz.practice);
+    $('toChallenge').classList.toggle('hidden', !qz.practice);
     $('rList').innerHTML = qz.items.map((it, i) => {
       const q = qz.qs[i], lab = it.verdict === 'ok' ? '<span class="ok">正解</span>' : it.verdict === 'timeout' ? '<span class="ng">時間切れ</span>' : '<span class="ng">不正解</span>';
       return `<li>${lab}　${q.ask.replace(/<[^>]+>/g, '').slice(0, 30)}　<span class="dim">${it.elapsedSec.toFixed(1)} 秒</span></li>`;
     }).join('');
+    if (qz.practice) return Promise.resolve(null);
     const rec = { id: qz.id, name: qz.name, course: courseOf(qz), start: qz.start, end: qz.end, limitSec: qz.limit, items: qz.items };
     $('recordImg').removeAttribute('src');
     return recordLib.buildQrTexts(rec).then(qr => {
@@ -283,7 +295,8 @@
     drawQr(ctx, qr.checkText, W - pad - 340 + 8, qrTop, 340);
     return cv.toDataURL('image/png');
   }
-  $('again').onclick = () => startQuiz();
+  $('again').onclick = () => startQuiz(st.quiz.practice);
+  $('toChallenge').onclick = () => startQuiz(false);
   $('home').onclick = () => { show('vHome'); syncHome(); };
 
   /* ---------- 外から使う口（電卓の「答に入れる」・自己テスト） ---------- */
@@ -339,6 +352,23 @@
         ok(`${f.name} 書き換えを見抜く`, !(await recordLib.verifyPair(qr.recordText.replace('score=10/10', 'score=9/10'), qr.checkText)).ok);
       } catch (e) { ok(`${f.name} 例外 ${e.message}`, false); console.error(e); }
     }
+    // 練習: 時間の棒を出さない。間違えると「最初からやり直す」が出て、押すと 1 問目にもどる。結果に記録の画像を出さない
+    try {
+      st.format = 'read'; st.units = ['K'];
+      startQuiz(true);
+      ok('練習は時間なし', document.querySelector('.qtop').classList.contains('practice') && timer === null);
+      App.setInput('99999'); finish('99999');
+      ok('間違えると「やり直す」', !!$('retry'));
+      next(); ok('次へで 2 問目', st.quiz.i === 1);
+      finish('99999'); $('retry').click();
+      ok('やり直すと 1 問目から', st.quiz.i === 0 && st.quiz.items.length === 0 && st.quiz.practice);
+      const a0 = cur().answer; finish(String(a0.value)); ok('正解なら「やり直す」なし', !$('retry'));
+      for (let i = 1; i < N_Q; i++) { next(); finish(String(cur().answer.value)); }
+      next();
+      ok('練習の結果に記録の画像なし', $('rRecord').classList.contains('hidden') && !$('toChallenge').classList.contains('hidden') && $('rClear').classList.contains('hidden'));
+      $('toChallenge').click(); ok('結果からチャレンジへ', !st.quiz.practice && timer !== null && !document.querySelector('.qtop').classList.contains('practice'));
+      stopTimer();
+    } catch (e) { ok(`練習 例外 ${e.message}`, false); console.error(e); }
     document.title = 'TEST ' + (out.every(s => s.startsWith('OK')) ? 'ALL OK' : 'FAIL') + ' | ' + out.join(' / ');
     document.body.dataset.test = document.title;
   }

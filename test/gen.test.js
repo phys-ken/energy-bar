@@ -78,6 +78,14 @@ for (const f of G.FORMATS) for (const u of units) {
       if (/持ち上げる前/.test(s0.title) && s0.Ug) bad(q, '床の上（図）なのに重力が 0 J でない');
       if (/床に下ろしたとき/.test(s1.title) && (s1.Ug || (q.explainChart.states[1].Ug))) bad(q, '床に下ろした（図）のに重力が 0 J でない');
     }
+    // 先生の決定（2026-11-16）: 見出しが図A・図B なら、問題文に「図Aは…、図Bは…を表す。」がある。問いに場面の名前を「」で書かない
+    const tt = (q.chart || q.explainChart || { states: [{}] }).states.map(s => s.title);
+    if (tt[0] === '図A' && !/図Aは.+、図Bは.+を表す。/.test(q.text)) bad(q, '図A・図B の説明の文がない: ' + q.text);
+    if (tt[0] === '図A' && /「/.test(q.ask)) bad(q, '図A・図B なのに問いに「」: ' + q.ask);
+    if (/図の A/.test(q.text)) bad(q, '古い書き方「図の A」: ' + q.text);
+    // 力学的エネルギーの問題で「合計」と書かない（お金は「お金の合計」でよい）
+    if (u !== 'M' && /合計/.test(q.ask + q.explain.join('') + (a.why ? a.why.join('') : ''))) bad(q, '「合計」と書いている: ' + q.ask);
+    if (u === 'M' && /エネルギーも同じ/.test(q.explain.join(''))) bad(q, 'お金の最後の 1 文が残っている');
     // 系は問題文の 1 文として書く（札にしない。先生の指摘 2026-11-16）
     if (!q.sys || !q.text.includes(`${q.sys}を系とする。`)) bad(q, '問題文に系が書かれていない: ' + q.text);
     if (/。 /.test(q.text)) bad(q, '文の切れ目に半角の空白: ' + q.text);
