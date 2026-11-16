@@ -95,7 +95,7 @@ const verifier = {
   },
   showAns(q, s) {
     if (!q || s === '-' || s == null) return s;
-    if (q.answer.kind === 'choice') return 'ABC'[+s] || s;
+    if (q.answer.kind === 'choice') return ['①', '②', '③'][+s] || s;   // アプリと同じ記号
     if (q.answer.kind === 'draw') { const p = String(s).split('/'); return `運動 ${p[0]}・ばね ${p[1]}・重力 ${p[2]}`; }
     return s + ' ' + q.answer.unit;
   },

@@ -9,6 +9,10 @@
   const LS = { name: 'ebar.nick', format: 'ebar.format', units: 'ebar.units' };
   const N_Q = 10;
   const APP_CHART = { theme: 'color', fs: 5.2, fsName: 4.4, fsTitle: 5.0, fsWork: 4.2 };   // スマホで数字が 14 px 以上になる大きさ
+  // 選択肢の記号は ①②③（場面の図の場所 A・B と同じ文字にしない）
+  const MARK = ['①', '②', '③'];
+  // 数と単位のあいだで行が折れないように（「0」と「J」が別の行に分かれていた）。同じ書体のまま改行しない空白にする
+  const nb = s => String(s).replace(/(\d) (?=(?:J|円|m\/s²|m\/s|m|N\/m|N|kg)(?![A-Za-z]))/g, '$1 ');
 
   const st = { format: 'read', units: ['M'], quiz: null };
   // 図の文字も画面と同じ書体に（問題文と図で書体が変わらないように）
@@ -67,8 +71,8 @@
     const qz = st.quiz, q = cur();
     answered = false; input = ''; drawVal = null;
     $('qNum').textContent = `${qz.i + 1} / ${qz.qs.length}`;
-    $('qText').innerHTML = q.text;
-    $('qAsk').innerHTML = q.ask;
+    $('qText').innerHTML = nb(q.text);
+    $('qAsk').innerHTML = nb(q.ask);
     $('qScene').innerHTML = q.scene ? EScene.scene(q.scene, { theme: 'color' }) : '';
     // 場面の図は中身に合わせて切り詰めてあるので、幅いっぱいに引きのばさず、実寸 × 一定の倍率で出す（文字が約 15 px）
     const ssvg = $('qScene').querySelector('svg');
@@ -93,7 +97,7 @@
       $('dOk').onclick = () => finish(drawVal);
     } else if (a.kind === 'choice') {
       ch.className = 'chart wide';
-      ch.innerHTML = `<div class="choices">${a.choices.map((c, i) => `<div class="choice" data-i="${i}"><span class="mk">${'ABC'[i]}</span>${chartSVG(c, { fs: 5.0 })}</div>`).join('')}</div>`;
+      ch.innerHTML = `<div class="choices">${a.choices.map((c, i) => `<div class="choice" data-i="${i}"><span class="mk">${MARK[i]}</span>${chartSVG(c, { fs: 5.0 })}</div>`).join('')}</div>`;
       ch.querySelectorAll('.choice').forEach(el => el.onclick = () => { if (!answered) { el.classList.add('sel'); finish(+el.dataset.i); } });
       $('answerArea').innerHTML = `<p class="dim">正しい棒グラフをタップして答える</p>`;
     }
@@ -182,16 +186,26 @@
     const a = q.answer;
     if (a.kind === 'num') return `正解は <b>${(a.show || EGen.f2(a.value)).replace('-', '−')} ${a.unit}</b>`;
     if (a.kind === 'draw') return `正解は 運動 <b>${a.target.K} J</b>・ばね <b>${a.target.Us} J</b>・重力 <b>${a.target.Ug} J</b>`;
-    return `正解は <b>${'ABC'[a.correct]}</b>`;
+    return `正解は <b>${MARK[a.correct]}</b>`;
+  }
+  // 自分の答え（不正解・時間切れのとき、正解と並べて見せる）
+  function yourText(q, value) {
+    const a = q.answer;
+    if (value == null) return '';
+    if (a.kind === 'num') return `あなたの答えは ${String(value).replace('-', '−')} ${a.unit}`;
+    if (a.kind === 'draw') return `あなたの答えは 運動 ${value.K} J・ばね ${value.Us} J・重力 ${value.Ug} J`;
+    return `あなたの答えは ${MARK[value]}`;
   }
   function showFeedback(q, ok, timedOut, value) {
     const a = q.answer;
     let h = (timedOut ? '<div class="verdict ng">時間切れ</div>' : ok ? '<div class="verdict ok">正解</div>' : '<div class="verdict ng">不正解</div>') + `<div>${correctText(q)}</div>`;
+    if (!ok && !timedOut) h += `<div class="dim">${yourText(q, value)}</div>`;
     if (a.kind === 'choice') {
       $('qChart').querySelectorAll('.choice').forEach((el, i) => { el.classList.toggle('right', i === a.correct); el.classList.toggle('wrong', i === value && i !== a.correct); });
-      if (!ok && value != null) h += `<p><b>${'ABC'[value]}</b>：${a.why[value]}</p>`;
-      h += `<p><b>${'ABC'[a.correct]}</b>：${a.why[a.correct].replace(/^正解。/, '')}</p>`;
-    } else h += `<ul>${q.explain.map(s => `<li>${s}</li>`).join('')}</ul>`;
+      // 正解の説明を先に、選んだ誤りの説明をあとに
+      h += `<p><b>${MARK[a.correct]}</b> ${nb(a.why[a.correct].replace(/^正解。/, ''))}</p>`;
+      if (!ok && value != null) h += `<p><b>${MARK[value]}</b> ${nb(a.why[value])}</p>`;
+    } else h += `<ul>${q.explain.map(s => `<li>${nb(s)}</li>`).join('')}</ul>`;
     // 答えの棒グラフは、図を増やさずに同じ場所の図を入れ替える（問題の図か解答の図か分からなくならないように。先生の指摘 2026-11-16）
     if (q.explainChart && a.kind !== 'choice') { $('qChart').className = 'chart'; $('qChart').innerHTML = chartSVG(q.explainChart); }
     const last = st.quiz.i === st.quiz.qs.length - 1;

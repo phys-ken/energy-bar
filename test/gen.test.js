@@ -66,6 +66,18 @@ for (const f of G.FORMATS) for (const u of units) {
     }
     // 問題文と問いにはカッコを使わない（条件や図の説明は独立した文に。先生の指摘 2026-11-16）
     if (/[（）()]/.test(q.text + q.ask + (q.sys || ''))) bad(q, 'カッコがある: ' + q.text + ' / ' + q.ask);
+    // 生徒役の検証で見つかった誤り（2026-11-16）が戻らないように
+    if (/速さ 0(\.0)? m\/s で動いている/.test(q.text)) bad(q, '速さ 0 で「動いている」: ' + q.text);
+    if (/エネルギーの合計/.test(q.ask + q.explain.join(''))) bad(q, '「エネルギーの合計」（合計の棒は力学的エネルギー）: ' + q.ask);
+    if (a.kind === 'num' && a.tol && a.show) {
+      const e3 = +Math.abs(a.value).toPrecision(3);
+      if (Math.abs(e3 - Math.abs(a.value)) < 1e-9 && Math.abs(a.value) < 100 && Math.abs(+a.show.replace('−', '-') - a.value) > 1e-9) bad(q, `ちょうど 3 桁の答えを丸めている ${a.value} → ${a.show}`);
+    }
+    if (q.chart && q.scene && /床に下ろしたとき|持ち上げる前/.test(q.chart.states.map(s => s.title).join())) {
+      const s0 = q.chart.states[0], s1 = q.chart.states[1];
+      if (/持ち上げる前/.test(s0.title) && s0.Ug) bad(q, '床の上（図）なのに重力が 0 J でない');
+      if (/床に下ろしたとき/.test(s1.title) && (s1.Ug || (q.explainChart.states[1].Ug))) bad(q, '床に下ろした（図）のに重力が 0 J でない');
+    }
     // 系は問題文の 1 文として書く（札にしない。先生の指摘 2026-11-16）
     if (!q.sys || !q.text.includes(`${q.sys}を系とする。`)) bad(q, '問題文に系が書かれていない: ' + q.text);
     if (/。 /.test(q.text)) bad(q, '文の切れ目に半角の空白: ' + q.text);
