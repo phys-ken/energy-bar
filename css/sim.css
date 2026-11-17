@@ -1,26 +1,67 @@
-/* シミュレーション（sim.html）。ボタンと色は app.css をそのまま使う */
-body.sim { overflow: auto; }
-.simwrap { max-width: 1200px; margin: 0 auto; padding: 10px 14px 60px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px 22px; }
-.simwrap h1 { font-size: 20px; margin: 2px 0 0; }
-@media (min-width: 1000px) {
-  .simwrap { grid-template-columns: minmax(0, 1fr) 320px; }
-  .simwrap h1 { grid-column: 1 / -1; }
-}
-.course svg { display: block; width: 100%; height: auto; touch-action: none; -webkit-user-select: none; user-select: none; }
-.readout { margin: 4px 0; font-size: 16px; font-variant-numeric: tabular-nums; min-height: 1.5em; }
-.runbtns { display: flex; flex-wrap: wrap; gap: 8px; }
-.simmsg { min-height: 1.5em; margin: 8px 0; font-size: 16px; line-height: 1.6; }
-.sys { margin: 6px 0 2px; font-size: 16px; }
-.stage .chart { max-width: 620px; }
-.chart svg { display: block; width: 100%; height: auto; }
-.chart.draw svg { touch-action: none; -webkit-user-select: none; user-select: none; }
-.pred { background: #fff; border: 2px solid var(--line); border-radius: 12px; padding: 8px 12px; margin-bottom: 8px; max-width: 640px; }
-.predpts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700; }
-.predpts button { min-height: 44px; font-size: 16px; }
-.pred .dim { margin: 4px 0; }
+/* シミュレーション（sim.html）。黒板に映す（iPad → プロジェクター）のが基本で、黒い画面が既定。
+ * 広い画面（iPad・パソコン）は 1 画面に収める: 上から 切り替え／コース／速さと知らせ／棒グラフ／ボタン。スクロールしない。
+ * 狭い画面（スマホ）は縦に並べてスクロールする。 */
+:root { --bg:#fbfbf7; --fg:#151515; --dim:#666; --line:#c7cbbd; --btn:#eceee4; --on:#1f5fbf; --hi:#c62828; }
+.dark { --bg:#0e1210; --fg:#f2f2ea; --dim:#a9afa5; --line:#3d453f; --btn:#1d2420; --on:#2f7fd9; --hi:#ffd84d; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); overscroll-behavior: none;
+  font-family: "BIZ UDPGothic", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;
+  touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.hidden { display: none !important; }
 
-.params { align-self: start; }
-.sl { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; margin: 0 0 12px; }
-.sl .nm { font-weight: 700; font-size: 15px; }
-.sl .val { font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 700; text-align: right; min-width: 5.5em; }
-.sl input { grid-column: 1 / -1; width: 100%; height: 32px; }
+button { font: inherit; font-weight: 700; font-size: 18px; background: var(--btn); color: var(--fg); border: 2px solid var(--line);
+  border-radius: 10px; min-height: 48px; min-width: 48px; padding: 4px 14px; cursor: pointer; white-space: nowrap; }
+button:active { filter: brightness(1.2); }
+button.on, .primary { background: var(--on); border-color: var(--on); color: #fff; }
+button:disabled { opacity: .35; cursor: default; }
+
+#app { display: flex; flex-direction: column; gap: 6px;
+  padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
+.bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.presets { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
+.presets button { font-size: 17px; padding: 4px 12px; }
+.tools { display: flex; gap: 6px; margin-left: auto; }
+.tools button { font-size: 22px; padding: 0 10px; }
+/* スマホ: プリセットは 2 列に折り返す（横に流すと名前が切れた） */
+@media (max-width: 599px) {
+  .bar:first-child { flex-direction: column-reverse; align-items: stretch; }
+  .presets { display: grid; grid-template-columns: 1fr 1fr; overflow: visible; }
+  .presets button { font-size: 15px; padding: 4px 6px; white-space: normal; line-height: 1.25; }
+  .presets button:last-child { grid-column: 1 / -1; }
+}
+
+.cell svg { display: block; width: 100%; height: auto; touch-action: none; }
+.info { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 18px; min-height: 1.6em; }
+.readout { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.msg { font-size: 18px; color: var(--hi); font-weight: 700; line-height: 1.4; }
+
+.fcap { margin: 0; font-size: 16px; font-weight: 700; text-align: center; }
+.ctl { gap: 8px 16px; }
+.runbtns { display: flex; gap: 8px; flex-wrap: wrap; }
+.predpts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-weight: 700; font-size: 18px; }
+.custom { display: flex; gap: 6px 18px; flex-wrap: wrap; flex: 1; align-items: center; }
+.sl { display: grid; grid-template-columns: auto auto; align-items: center; gap: 0 8px; min-width: 200px; flex: 1; }
+.sl .nm { font-weight: 700; font-size: 16px; }
+.sl .val { font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 700; text-align: right; }
+.sl input { grid-column: 1 / -1; width: 100%; height: 34px; accent-color: var(--on); }
+.fixed { font-size: 14px; color: var(--dim); width: 100%; }
+
+/* 広い画面: 1 画面に収める（全画面・ホーム画面から開いたときも、ずれない） */
+@media (min-width: 600px) and (min-height: 540px) {
+  html, body { height: 100%; overflow: hidden; }
+  #app { position: fixed; inset: 0; }
+  .course { flex: 1.0 1 0; min-height: 0; }
+  .chart { flex: 1.45 1 0; min-height: 0; }
+  .cell svg { height: 100%; }
+  .readout { font-size: clamp(18px, 2.8vh, 30px); }
+  .msg { font-size: clamp(16px, 2.4vh, 26px); }
+  button { font-size: clamp(16px, 2.3vh, 22px); min-height: clamp(44px, 6vh, 60px); }
+  .presets button { font-size: clamp(15px, 2.1vh, 21px); }
+}
+/* 縦長の iPad: 図は幅で決まるので、図の高さは中身どおりにして、余りは棒グラフの上下に回す */
+@media (min-width: 600px) and (min-height: 540px) and (orientation: portrait) {
+  .course { flex: none; }
+  .cell svg { height: auto; }
+  .chart { display: flex; align-items: center; }
+}
