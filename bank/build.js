@@ -1,5 +1,7 @@
 // node bank/build.js … 生成器の問題を、問題バンク（mondai-bank）の形に書き出す。
-// 出力は bank/out/ に置くだけ。バンクへの取り込みは先生の確認のあと、別の手順で行う（docs/decisions.md 17）。
+// 出力は bank/out/ に置くだけ。2026-11-17 に 205 問を mondai-bank の data/items/220_energybar.json に取り込んだ。
+// **取り込んだあとは、この出力でバンクのファイルを上書きしない。** 生成器を直すと同じ qid から別の問題ができる。
+// 問題を足すときは ids.json の末尾に新しい id を足し、その問題だけをバンクの末尾に足す。ids.json は消さない。
 //   bank/out/220_energybar.json      問題（バンクの items の形）
 //   bank/out/figures/energybar/*.png 図（白黒、300 dpi）
 // 選ぶ問題は bank/ids.json に固定する。一度バンクに入れた id と qid の対応は変えない（バンクの 3 つの禁止）。
@@ -14,18 +16,18 @@ const IDS = path.join(__dirname, 'ids.json');
 // 単元 → 教科書の節（東京書籍『改訂新編物理基礎』1 編 3 章）
 const SECTION = { M: 23, K: 21, Us: 22, Ug: 22, C: 23, F: 24 };
 const TOPIC = { M: 'お金で考える保存', K: '仕事と運動エネルギー', Us: '弾性力による位置エネルギー', Ug: '重力による位置エネルギー', C: '力学的エネルギーの保存', F: '力学的エネルギーが保存されない運動' };
+// その問題が要求する、自分より前の節（19 仕事、21 運動エネルギー、22 位置エネルギー、23 保存）
+const REQUIRES = { M: [], K: [19], Us: [19, 21], Ug: [19, 21], C: [19, 21, 22], F: [19, 21, 22, 23] };
+// 想定の難しさ（1〜5）: 読む 1・かく 2・選ぶ 2・計算 3
+const DIFF = { 1: 1, 2: 1, 3: 2, 4: 2, 5: 3 };
 const PER = { M: 5 };   // お金は 5 問、ほかは 10 問
 const FMT_ID = { 2: 'read', 3: 'draw', 4: 'choose', 5: 'calc' };
 const LABELS = ['①', '②', '③'];
 
 // ---------- 問題を選ぶ ----------
 function hex6(n) { return ('000000' + ((n * 2654435761) >>> 0).toString(16)).slice(-6); }
-// 場面の型: 見出し 2 つと問いの骨組み（数を # にする）
-const kindOf = q => {
-  const c = q.chart || q.explainChart;
-  const t = c ? c.states.map(s => s.title).join('→') : '';
-  return t + '|' + q.ask.replace(/[\d.]+/g, '#');
-};
+// 場面の型: 問題文と問いの骨組み（数を # にする）。見出しはほとんど「図A→図B」なので、場面の区別には使えない
+const kindOf = q => (q.text + '|' + q.ask).replace(/[\d.]+/g, '#');
 function choose() {
   const pick = [];
   for (const f of G.FORMATS) for (const u of G.UNITS.map(x => x.id)) {
@@ -33,9 +35,14 @@ function choose() {
     const type = u === 'M' ? 'L1M' : `L${f.n}${u}`;
     if (u === 'M' && f.n !== 2) continue;
     const want = PER[u] || 10;
-    const byKind = new Map();
+    const byKind = new Map(), seen = new Set();
     for (let i = 1; i <= 600; i++) {
       const q = G.regen(`${type}-${hex6(i + f.n * 1000 + u.charCodeAt(0) * 7)}`);
+      // 数値まで同じ問題を 2 回入れない（通読で、計算の同じ問題が 3 つ並んでいた 2026-11-17）
+      // 選ぶ問題は文に数がなく、選択肢の図の数で区別する（答えの中に選択肢の棒が入っている）
+      const same = q.text + '|' + q.ask + '|' + JSON.stringify(q.chart && q.chart.states) + '|' + JSON.stringify(q.answer);
+      if (seen.has(same)) continue;
+      seen.add(same);
       const k = kindOf(q);
       if (!byKind.has(k)) byKind.set(k, []);
       byKind.get(k).push(q);
@@ -58,6 +65,8 @@ const PNG = (name, svg) => {
   fs.writeFileSync(s, svg);
   execFileSync('rsvg-convert', ['-d', '300', '-p', '300', '-o', p, s]);
   fs.unlinkSync(s);
+  // PNG に 300 dpi を書き込む（rsvg-convert は書かない）。書かないと Word が 96 dpi とみなし、図が約 3 倍に大きくなる
+  execFileSync('magick', [p, '-units', 'PixelsPerInch', '-density', '300', p]);
   return `energybar/${name}.png`;
 };
 const chartSVG = c => E.chart(c.states, Object.assign({}, c.opt, { theme: 'mono' }));
@@ -69,9 +78,9 @@ function toItem({ id, qid }) {
   const figs = [];
   if (q.scene) figs.push(PNG(`${id}_scene`, S.scene(q.scene)));
   const it = {
-    id, topic: 'energy_bar_chart', topic_label: `エネルギー棒グラフ（${TOPIC[u]}）`, difficulty_intended: null,
+    id, topic: 'energy_bar_chart', topic_label: `エネルギー棒グラフ（${TOPIC[u]}）`, difficulty_intended: DIFF[q.level],
     textbook: { part: 1, chapter: 3, section: SECTION[u] }, textbook_adv: null, scope: 'physics_basic',
-    requires: [], exposure: 'original',
+    requires: REQUIRES[u].map(s => ({ part: 1, chapter: 3, section: s })), exposure: 'original',
     source: { kind: 'original', name: 'エネルギー棒グラフ 問題の生成器', locator: qid, drive_file_id: null },
     derived_from: qid, origin: 'ai_generated', shelf: 'course', topics: ['エネルギー棒グラフ'],
     chained: false, scaffolded_by: [], group_id: null, group_stem: null, group_figures: null, sub_label: null, sub_index: null,
@@ -99,9 +108,10 @@ function toItem({ id, qid }) {
     const t = a.target, w = q.explainChart.opt.works[0];
     it.rubric = `棒: 運動 ${t.K} J・ばね ${t.Us} J・重力 ${t.Ug} J・力学的エネルギー ${t.K + t.Us + t.Ug} J。` +
       (w ? `矢印: ${w.W > 0 ? '系に入る下向き' : '系から出る上向き'}、${w.W > 0 ? '+' : '−'}${Math.abs(w.W)} J。` : '矢印: かかない（仕事なし）。');
+    it.answer = it.rubric;   // 答えが空だと、バンクで「採点できる問題」に数えられない
   } else if (q.level === 4) {              // 場面から選ぶ
     it.type = 'choice';
-    it.choices = a.choices.map((c, i) => ({ label: LABELS[i], text: '', figure: PNG(`${id}_c${i + 1}`, chartSVG(c)), misconception: i === a.correct ? null : a.why[i] }));
+    it.choices = a.choices.map((c, i) => ({ label: LABELS[i], text: '', figure: PNG(`${id}_c${i + 1}`, chartSVG(c)), misconception: i === a.correct ? null : a.mis[i] }));
     it.answer = LABELS[a.correct];
     it.explanation = a.why.map((w, i) => `${LABELS[i]} ${w.replace(/^正解。/, '')}`).join('\n');
   } else {                                 // 計算

@@ -86,6 +86,8 @@ for (const f of G.FORMATS) for (const u of units) {
     // 力学的エネルギーの問題で「合計」と書かない（お金は「お金の合計」でよい）
     if (u !== 'M' && /合計/.test(q.ask + q.explain.join('') + (a.why ? a.why.join('') : ''))) bad(q, '「合計」と書いている: ' + q.ask);
     if (u === 'M' && /エネルギーも同じ/.test(q.explain.join(''))) bad(q, 'お金の最後の 1 文が残っている');
+    // 問題文に書いてある仕事の値を、そのまま問わない（取り込み前の通読で見つけた 2026-11-17）
+    if (a.kind === 'num' && /仕事は何 J か/.test(q.ask) && q.text.includes(`仕事は ${G.f2(a.value)} J`)) bad(q, '問題文に答えが書いてある: ' + q.text);
     // 系は問題文の 1 文として書く（札にしない。先生の指摘 2026-11-16）
     if (!q.sys || !q.text.includes(`${q.sys}を系とする。`)) bad(q, '問題文に系が書かれていない: ' + q.text);
     if (/。 /.test(q.text)) bad(q, '文の切れ目に半角の空白: ' + q.text);

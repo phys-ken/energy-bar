@@ -129,7 +129,7 @@
  },
  {
   "id": "EBG-Ug-read-08",
-  "qid": "L2Ug-49d46c"
+  "qid": "L2Ug-96ae92"
  },
  {
   "id": "EBG-Ug-read-09",
@@ -193,15 +193,15 @@
  },
  {
   "id": "EBG-F-read-04",
-  "qid": "L2F-e27dc0"
+  "qid": "L2F-ab040f"
  },
  {
   "id": "EBG-F-read-05",
-  "qid": "L2F-19f771"
+  "qid": "L2F-e27dc0"
  },
  {
   "id": "EBG-F-read-06",
-  "qid": "L2F-517122"
+  "qid": "L2F-19f771"
  },
  {
   "id": "EBG-F-read-07",
@@ -241,7 +241,7 @@
  },
  {
   "id": "EBG-K-draw-06",
-  "qid": "L3K-afd032"
+  "qid": "L3K-fcaa58"
  },
  {
   "id": "EBG-K-draw-07",
@@ -253,7 +253,7 @@
  },
  {
   "id": "EBG-K-draw-09",
-  "qid": "L3K-fcaa58"
+  "qid": "L3K-f8993f"
  },
  {
   "id": "EBG-K-draw-10",
@@ -317,27 +317,27 @@
  },
  {
   "id": "EBG-Ug-draw-05",
-  "qid": "L3Ug-e7cf5f"
- },
- {
-  "id": "EBG-Ug-draw-06",
-  "qid": "L3Ug-8e3c72"
- },
- {
-  "id": "EBG-Ug-draw-07",
   "qid": "L3Ug-56c2c1"
  },
  {
-  "id": "EBG-Ug-draw-08",
+  "id": "EBG-Ug-draw-06",
   "qid": "L3Ug-6c2336"
  },
  {
-  "id": "EBG-Ug-draw-09",
+  "id": "EBG-Ug-draw-07",
   "qid": "L3Ug-c5b623"
  },
  {
+  "id": "EBG-Ug-draw-08",
+  "qid": "L3Ug-db1698"
+ },
+ {
+  "id": "EBG-Ug-draw-09",
+  "qid": "L3Ug-129049"
+ },
+ {
   "id": "EBG-Ug-draw-10",
-  "qid": "L3Ug-a39ce7"
+  "qid": "L3Ug-ce5dd1"
  },
  {
   "id": "EBG-C-draw-01",
@@ -537,7 +537,7 @@
  },
  {
   "id": "EBG-Ug-choose-10",
-  "qid": "L4Ug-e804ed"
+  "qid": "L4Ug-1f7e9e"
  },
  {
   "id": "EBG-C-choose-01",
@@ -633,31 +633,31 @@
  },
  {
   "id": "EBG-K-calc-04",
-  "qid": "L5K-df0d51"
+  "qid": "L5K-c9acdc"
  },
  {
   "id": "EBG-K-calc-05",
-  "qid": "L5K-857a64"
+  "qid": "L5K-233fc9"
  },
  {
   "id": "EBG-K-calc-06",
-  "qid": "L5K-09ce3b"
+  "qid": "L5K-ebc618"
  },
  {
   "id": "EBG-K-calc-07",
-  "qid": "L5K-56a861"
+  "qid": "L5K-df0d51"
  },
  {
   "id": "EBG-K-calc-08",
-  "qid": "L5K-05bd22"
+  "qid": "L5K-168702"
  },
  {
   "id": "EBG-K-calc-09",
-  "qid": "L5K-529748"
+  "qid": "L5K-7019ef"
  },
  {
   "id": "EBG-K-calc-10",
-  "qid": "L5K-f9045b"
+  "qid": "L5K-5ab97a"
  },
  {
   "id": "EBG-Us-calc-01",
@@ -677,7 +677,7 @@
  },
  {
   "id": "EBG-Us-calc-05",
-  "qid": "L5Us-170c7e"
+  "qid": "L5Us-bd7991"
  },
  {
   "id": "EBG-Us-calc-06",
@@ -689,7 +689,7 @@
  },
  {
   "id": "EBG-Us-calc-08",
-  "qid": "L5Us-bd7991"
+  "qid": "L5Us-9b6055"
  },
  {
   "id": "EBG-Us-calc-09",
@@ -709,35 +709,35 @@
  },
  {
   "id": "EBG-Ug-calc-03",
-  "qid": "L5Ug-4e862f"
- },
- {
-  "id": "EBG-Ug-calc-04",
   "qid": "L5Ug-170c7e"
  },
  {
-  "id": "EBG-Ug-calc-05",
-  "qid": "L5Ug-f4f342"
+  "id": "EBG-Ug-calc-04",
+  "qid": "L5Ug-4e862f"
  },
  {
-  "id": "EBG-Ug-calc-06",
+  "id": "EBG-Ug-calc-05",
   "qid": "L5Ug-85ffe0"
  },
  {
-  "id": "EBG-Ug-calc-07",
-  "qid": "L5Ug-63e6a4"
- },
- {
-  "id": "EBG-Ug-calc-08",
+  "id": "EBG-Ug-calc-06",
   "qid": "L5Ug-bd7991"
  },
  {
-  "id": "EBG-Ug-calc-09",
+  "id": "EBG-Ug-calc-07",
   "qid": "L5Ug-41cd68"
  },
  {
-  "id": "EBG-Ug-calc-10",
+  "id": "EBG-Ug-calc-08",
   "qid": "L5Ug-2c6cf3"
+ },
+ {
+  "id": "EBG-Ug-calc-09",
+  "qid": "L5Ug-9b6055"
+ },
+ {
+  "id": "EBG-Ug-calc-10",
+  "qid": "L5Ug-572ddd"
  },
  {
   "id": "EBG-C-calc-01",
