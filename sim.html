@@ -19,6 +19,7 @@
     <button id="bReset" type="button" title="はじめから">↺</button>
     <button id="bSlow" type="button">ゆっくり</button>
     <button id="bPredict" type="button">予想する</button>
+    <button id="bAdj" class="icon" type="button" title="値を動かす">⚙</button>
     <span class="sp"></span>
     <button id="bTheme" class="icon" type="button" title="明るい画面／黒い画面">☀</button>
     <button id="bFull" class="icon" type="button" title="全画面">⛶</button>
@@ -26,14 +27,14 @@
   <div id="predPts" class="bar sub hidden"></div>
   <div id="custom" class="bar sub hidden"></div>
 
-  <!-- 上にコース、下に棒グラフ。どの画面でも上下に積む（横に並べると両方小さくなった） -->
-  <main class="stage">
+  <!-- 上にコース、下に棒グラフ（横に並べると両方小さくなった）。縦長の場面（鉛直）だけ、横長の画面で左右に並べる -->
+  <main id="stage" class="stage">
     <div class="cell course">
       <div id="course"></div>
       <div id="readout" class="readout"></div>
     </div>
     <div class="side">
-      <div id="msg" class="msg"></div>
+      <div class="row2"><div id="sys" class="sys"></div><div id="msg" class="msg"></div></div>
       <div id="chart" class="cell chart"></div>
       <p id="fricCap" class="fcap hidden">↑ 摩擦力が台車に負の仕事をした</p>
     </div>

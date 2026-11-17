@@ -28,7 +28,13 @@ button:disabled { opacity: .35; cursor: default; }
 .cell svg { display: block; width: 100%; height: auto; touch-action: none; }
 /* 速さ・高さはコースの左上に大きく（PhET の Energy Skate Park も速さは図の中に出す） */
 .readout { position: absolute; left: 6px; top: 2px; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
-.msg { min-height: 1.35em; font-size: 18px; color: var(--hi); font-weight: 700; line-height: 1.35; text-align: center; }
+.msg { min-height: 1.35em; font-size: 18px; color: var(--hi); font-weight: 700; line-height: 1.35; text-align: center; flex: 1 1 14em; }
+/* 系: 物体・ばね・地球。系に入れたものは塗り、外は点線の枠。物体（と斜面のある場面の地球）は選べない */
+.row2 { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
+.sys { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 18px; }
+.sys .chip { flex: none; min-height: 40px; min-width: 0; padding: 2px 12px; border-radius: 20px; font-size: 18px; border: 2px dashed var(--line); background: transparent; color: var(--dim); }
+.sys .chip.on { background: var(--on); border: 2px solid var(--on); color: #fff; }
+.sys .chip.lock { display: inline-flex; align-items: center; background: var(--btn); border: 2px solid var(--line); color: var(--fg); }
 .stage, .side { display: flex; flex-direction: column; gap: 4px; }
 .fcap { margin: 0; font-size: 16px; font-weight: 700; text-align: center; }
 
@@ -58,9 +64,21 @@ button:disabled { opacity: .35; cursor: default; }
   .cell svg { height: 100%; }
   .readout { font-size: clamp(20px, 3.4vh, 38px); }
   .msg { font-size: clamp(16px, 2.6vh, 28px); }
+  .sys, .sys .chip { font-size: clamp(16px, 2.4vh, 24px); }
+  .sys .chip { min-height: clamp(36px, 5vh, 52px); }
   button, select { font-size: clamp(16px, 2.4vh, 24px); min-height: clamp(44px, 6.5vh, 64px); }
 }
 /* 16:9 でも上下に積む。左右に並べると、コースも棒グラフも幅で縮み、台車が約 135 px → 95 px に小さくなった（2026-11-17 に試した） */
+/* 縦長の場面（鉛直: 自由落下・鉛直ばね振り子）は、横長の画面で左右に並べる（上下に積むと物体が小さくなる） */
+@media (min-width: 600px) and (min-height: 540px) and (orientation: landscape) {
+  .stage.tall { flex-direction: row; }
+  .stage.tall .course { flex: 0 0 40%; }
+  .stage.tall .readout { white-space: normal; right: 0; }
+  .stage.tall .side { flex: 1 1 0; }
+  html .stage.tall .course svg { max-height: none; }   /* 下の 48vh より強く */
+}
+/* 縦長の場面を上下に積むとき（スマホ・縦の iPad）は、図が画面の半分より高くならないように */
+.stage.tall .course svg { max-height: 48vh; }
 /* 縦長の iPad: 図は幅で決まるので、中身どおりの高さにして余りを上下に回す */
 @media (min-width: 600px) and (min-height: 540px) and (orientation: portrait) {
   .course { flex: none; }
