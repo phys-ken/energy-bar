@@ -17,6 +17,7 @@
 | `js/tools.js` | 計算用紙（手書き）と電卓 |
 | `js/record.js` | 記録の QR①（`ENERGY-BAR RECORD v1`）と QR②（照合の sha256） |
 | `verify.html` `js/verify.js` | 先生用：提出画像の照合・重複の検出・CSV・問題の作り直し |
+| `sim.html` `js/sim.js` `css/sim.css` | シミュレーション（ばね → 粗い面 → 斜面 の台車）。物理は `lib/simcore.js` |
 | `proto/scratch.html` | 最初の試作 |
 | `samples/` | 図の見本を作るスクリプト（`node samples/make.js`、`node samples/scenes.js`） |
 
@@ -27,6 +28,8 @@
   `google-chrome --headless=new --virtual-time-budget=15000 --dump-dom "http://127.0.0.1:8765/index.html?test"` の `data-test` が `TEST ALL OK`
   （電卓・計算用紙・お金だけなら「読む」だけ・4 つの出題形式それぞれ全問正解で記録が本物になるか・書き換えを見抜くか）
 - 先生用ページ: 同じく `verify.html?test`
+- シミュレーション: 同じく `sim.html?test`（粗い面で止まり摩擦力の仕事＝はじめの力学的エネルギー・基準面を上げると重力の棒が負・予想の点で止まる・摩擦なしで矢印なし）。
+  `sim.html?t=1.2[&ref=0.6][&pt=A|B|C]` でその時刻まで進めた画面を出す
 - 画面の確認: `index.html?demo=read|draw|choose|calc&q=種類-たね[&fb=1]` で、その問題（答えた後の画面）を出す
 - 生成器の検査は「まえ」「あと」「段」などの使わない言葉と、図の入れ忘れも調べる
 

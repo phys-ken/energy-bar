@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>エネルギー棒グラフ シミュレーション</title>
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/sim.css">
+</head>
+<body class="sim">
+<div class="simwrap">
+  <h1>ばね → 粗い面 → 斜面</h1>
+
+  <div class="stage">
+    <div id="course" class="course"></div>
+    <p id="readout" class="readout"></p>
+    <div class="runbtns">
+      <button id="bRun" class="primary" type="button">▶ 走らせる</button>
+      <button id="bReset" type="button">↺ はじめから</button>
+      <button id="bSlow" type="button">ゆっくり</button>
+      <button id="bPredict" type="button">予想する</button>
+    </div>
+    <p id="msg" class="simmsg"></p>
+
+    <div id="predBox" class="pred hidden">
+      <div class="predpts"><span>どの点で？</span><span id="predPts"></span></div>
+      <p class="dim" id="predHint"></p>
+      <div id="predChart" class="chart draw"></div>
+    </div>
+
+    <p class="sys">台車・ばね・地球を系とする。</p>
+    <div id="chart" class="chart"></div>
+  </div>
+
+  <div class="params">
+    <div id="sliders"></div>
+    <p class="dim">基準面は、図の点線を指で上下に動かせます。</p>
+    <p class="dim"><a href="index.html">演習アプリへ</a></p>
+  </div>
+</div>
+
+<script src="lib/ebar.js"></script>
+<script src="lib/scene.js"></script>
+<script src="lib/simcore.js"></script>
+<script src="js/sim.js"></script>
+</body>
+</html>

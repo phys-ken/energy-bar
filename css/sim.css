@@ -1,0 +1,26 @@
+/* シミュレーション（sim.html）。ボタンと色は app.css をそのまま使う */
+body.sim { overflow: auto; }
+.simwrap { max-width: 1200px; margin: 0 auto; padding: 10px 14px 60px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px 22px; }
+.simwrap h1 { font-size: 20px; margin: 2px 0 0; }
+@media (min-width: 1000px) {
+  .simwrap { grid-template-columns: minmax(0, 1fr) 320px; }
+  .simwrap h1 { grid-column: 1 / -1; }
+}
+.course svg { display: block; width: 100%; height: auto; touch-action: none; -webkit-user-select: none; user-select: none; }
+.readout { margin: 4px 0; font-size: 16px; font-variant-numeric: tabular-nums; min-height: 1.5em; }
+.runbtns { display: flex; flex-wrap: wrap; gap: 8px; }
+.simmsg { min-height: 1.5em; margin: 8px 0; font-size: 16px; line-height: 1.6; }
+.sys { margin: 6px 0 2px; font-size: 16px; }
+.stage .chart { max-width: 620px; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart.draw svg { touch-action: none; -webkit-user-select: none; user-select: none; }
+.pred { background: #fff; border: 2px solid var(--line); border-radius: 12px; padding: 8px 12px; margin-bottom: 8px; max-width: 640px; }
+.predpts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700; }
+.predpts button { min-height: 44px; font-size: 16px; }
+.pred .dim { margin: 4px 0; }
+
+.params { align-self: start; }
+.sl { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; margin: 0 0 12px; }
+.sl .nm { font-weight: 700; font-size: 15px; }
+.sl .val { font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 700; text-align: right; min-width: 5.5em; }
+.sl input { grid-column: 1 / -1; width: 100%; height: 32px; }
