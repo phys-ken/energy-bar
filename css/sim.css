@@ -1,8 +1,8 @@
 /* シミュレーション（sim.html）。黒板に映す（iPad → プロジェクター）のが基本で、黒い画面が既定。
- * 広い画面（iPad・パソコン）は 1 画面に収める: 上から 切り替え／コース／速さと知らせ／棒グラフ／ボタン。スクロールしない。
+ * 操作は上の 1 行だけ。残りはコース（大きく）と棒グラフ。広い画面は 1 画面に収め、スクロールしない。
  * 狭い画面（スマホ）は縦に並べてスクロールする。 */
-:root { --bg:#fbfbf7; --fg:#151515; --dim:#666; --line:#c7cbbd; --btn:#eceee4; --on:#1f5fbf; --hi:#c62828; }
-.dark { --bg:#0e1210; --fg:#f2f2ea; --dim:#a9afa5; --line:#3d453f; --btn:#1d2420; --on:#2f7fd9; --hi:#ffd84d; }
+:root { --bg:#fbfbf7; --fg:#151515; --dim:#555; --line:#c7cbbd; --btn:#eceee4; --on:#1f5fbf; --hi:#c62828; }
+.dark { --bg:#0e1210; --fg:#f2f2ea; --dim:#c9cec5; --line:#465049; --btn:#1d2420; --on:#2f7fd9; --hi:#ffd84d; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; background: var(--bg); color: var(--fg); overscroll-behavior: none;
   font-family: "BIZ UDPGothic", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;
@@ -10,58 +10,60 @@ html, body { margin: 0; background: var(--bg); color: var(--fg); overscroll-beha
 body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .hidden { display: none !important; }
 
-button { font: inherit; font-weight: 700; font-size: 18px; background: var(--btn); color: var(--fg); border: 2px solid var(--line);
+button, select { font: inherit; font-weight: 700; font-size: 18px; background: var(--btn); color: var(--fg); border: 2px solid var(--line);
   border-radius: 10px; min-height: 48px; min-width: 48px; padding: 4px 14px; cursor: pointer; white-space: nowrap; }
+select { padding-right: 10px; }
 button:active { filter: brightness(1.2); }
 button.on, .primary { background: var(--on); border-color: var(--on); color: #fff; }
 button:disabled { opacity: .35; cursor: default; }
+.icon { font-size: 22px; padding: 0 10px; }
 
 #app { display: flex; flex-direction: column; gap: 6px;
   padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
 .bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.presets { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
-.presets button { font-size: 17px; padding: 4px 12px; }
-.tools { display: flex; gap: 6px; margin-left: auto; }
-.tools button { font-size: 22px; padding: 0 10px; }
-/* スマホ: プリセットは 2 列に折り返す（横に流すと名前が切れた） */
-@media (max-width: 599px) {
-  .bar:first-child { flex-direction: column-reverse; align-items: stretch; }
-  .presets { display: grid; grid-template-columns: 1fr 1fr; overflow: visible; }
-  .presets button { font-size: 15px; padding: 4px 6px; white-space: normal; line-height: 1.25; }
-  .presets button:last-child { grid-column: 1 / -1; }
-}
+.bar .sp { flex: 1; }
+.sub { font-weight: 700; font-size: 18px; }
 
+.cell { position: relative; }
 .cell svg { display: block; width: 100%; height: auto; touch-action: none; }
-.info { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 18px; min-height: 1.6em; }
-.readout { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.msg { font-size: 18px; color: var(--hi); font-weight: 700; line-height: 1.4; }
-
+/* 速さ・高さはコースの左上に大きく（PhET の Energy Skate Park も速さは図の中に出す） */
+.readout { position: absolute; left: 6px; top: 2px; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
+.msg { min-height: 1.35em; font-size: 18px; color: var(--hi); font-weight: 700; line-height: 1.35; text-align: center; }
+.stage, .side { display: flex; flex-direction: column; gap: 4px; }
 .fcap { margin: 0; font-size: 16px; font-weight: 700; text-align: center; }
-.ctl { gap: 8px 16px; }
-.runbtns { display: flex; gap: 8px; flex-wrap: wrap; }
-.predpts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-weight: 700; font-size: 18px; }
-.custom { display: flex; gap: 6px 18px; flex-wrap: wrap; flex: 1; align-items: center; }
-.sl { display: grid; grid-template-columns: auto auto; align-items: center; gap: 0 8px; min-width: 200px; flex: 1; }
-.sl .nm { font-weight: 700; font-size: 16px; }
-.sl .val { font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 700; text-align: right; }
+
+.sl { display: grid; grid-template-columns: auto auto; align-items: center; gap: 0 8px; min-width: 190px; flex: 1; }
+.sl .nm { font-size: 16px; }
+.sl .val { font-variant-numeric: tabular-nums; font-size: 18px; text-align: right; }
 .sl input { grid-column: 1 / -1; width: 100%; height: 34px; accent-color: var(--on); }
-.fixed { font-size: 14px; color: var(--dim); width: 100%; }
+.fixed { font-size: 14px; font-weight: 400; color: var(--dim); width: 100%; }
+
+/* スマホ: ボタンは折り返し、「はじめから」などは記号だけ */
+@media (max-width: 599px) {
+  button, select { font-size: 16px; padding: 4px 10px; }
+  #preset { flex: 1 1 100%; }
+  .readout { font-size: 16px; }
+  .msg { font-size: 15px; }
+}
 
 /* 広い画面: 1 画面に収める（全画面・ホーム画面から開いたときも、ずれない） */
 @media (min-width: 600px) and (min-height: 540px) {
   html, body { height: 100%; overflow: hidden; }
   #app { position: fixed; inset: 0; }
-  .course { flex: 1.0 1 0; min-height: 0; }
-  .chart { flex: 1.45 1 0; min-height: 0; }
+  .stage { flex: 1 1 0; min-height: 0; }
+  .course { flex: 1 1 0; min-height: 0; }
+  .side { flex: 1 1 0; min-height: 0; }
+  .chart { flex: 1 1 0; min-height: 0; }
+  #course { height: 100%; }
   .cell svg { height: 100%; }
-  .readout { font-size: clamp(18px, 2.8vh, 30px); }
-  .msg { font-size: clamp(16px, 2.4vh, 26px); }
-  button { font-size: clamp(16px, 2.3vh, 22px); min-height: clamp(44px, 6vh, 60px); }
-  .presets button { font-size: clamp(15px, 2.1vh, 21px); }
+  .readout { font-size: clamp(20px, 3.4vh, 38px); }
+  .msg { font-size: clamp(16px, 2.6vh, 28px); }
+  button, select { font-size: clamp(16px, 2.4vh, 24px); min-height: clamp(44px, 6.5vh, 64px); }
 }
-/* 縦長の iPad: 図は幅で決まるので、図の高さは中身どおりにして、余りは棒グラフの上下に回す */
+/* 16:9 でも上下に積む。左右に並べると、コースも棒グラフも幅で縮み、台車が約 135 px → 95 px に小さくなった（2026-11-17 に試した） */
+/* 縦長の iPad: 図は幅で決まるので、中身どおりの高さにして余りを上下に回す */
 @media (min-width: 600px) and (min-height: 540px) and (orientation: portrait) {
   .course { flex: none; }
-  .cell svg { height: auto; }
+  .cell svg, #course { height: auto; }
   .chart { display: flex; align-items: center; }
 }

@@ -12,34 +12,32 @@
 </head>
 <body>
 <div id="app">
+  <!-- 操作は 1 行にまとめる（場面・再生・予想）。図の場所を広くとる -->
   <header class="bar">
-    <div id="presets" class="presets" role="tablist"></div>
-    <div class="tools">
-      <button id="bTheme" type="button" title="明るい画面／黒い画面">☀</button>
-      <button id="bFull" type="button" title="全画面">⛶</button>
-    </div>
+    <select id="preset" aria-label="場面"></select>
+    <button id="bRun" class="primary" type="button">▶ 走らせる</button>
+    <button id="bReset" type="button" title="はじめから">↺</button>
+    <button id="bSlow" type="button">ゆっくり</button>
+    <button id="bPredict" type="button">予想する</button>
+    <span class="sp"></span>
+    <button id="bTheme" class="icon" type="button" title="明るい画面／黒い画面">☀</button>
+    <button id="bFull" class="icon" type="button" title="全画面">⛶</button>
   </header>
+  <div id="predPts" class="bar sub hidden"></div>
+  <div id="custom" class="bar sub hidden"></div>
 
-  <div id="course" class="cell course"></div>
-
-  <div class="info">
-    <span id="readout" class="readout"></span>
-    <span id="msg" class="msg"></span>
-  </div>
-
-  <div id="chart" class="cell chart"></div>
-  <p id="fricCap" class="fcap hidden">↑ 摩擦力が台車に負の仕事をした</p>
-
-  <footer class="bar ctl">
-    <div class="runbtns">
-      <button id="bRun" class="primary" type="button">▶ 走らせる</button>
-      <button id="bReset" type="button">↺ はじめから</button>
-      <button id="bSlow" type="button">ゆっくり</button>
-      <button id="bPredict" type="button">予想する</button>
+  <!-- 上にコース、下に棒グラフ。どの画面でも上下に積む（横に並べると両方小さくなった） -->
+  <main class="stage">
+    <div class="cell course">
+      <div id="course"></div>
+      <div id="readout" class="readout"></div>
     </div>
-    <div id="predPts" class="predpts hidden"></div>
-    <div id="custom" class="custom hidden"></div>
-  </footer>
+    <div class="side">
+      <div id="msg" class="msg"></div>
+      <div id="chart" class="cell chart"></div>
+      <p id="fricCap" class="fcap hidden">↑ 摩擦力が台車に負の仕事をした</p>
+    </div>
+  </main>
 </div>
 
 <script src="lib/ebar.js"></script>

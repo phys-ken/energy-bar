@@ -20,13 +20,13 @@
   const PRESETS = [
     { id: 'climb', nm: '斜面を登りきる', x: 0.20, d: 0.3, h: 0.20 },
     { id: 'turn', nm: '斜面の途中で折り返す', x: 0.20, d: 0, h: 0.60 },
-    { id: 'stop', nm: '粗い面で止まる', x: 0.10, d: 1.0, h: 0.20 },
+    { id: 'stop', nm: '粗い面で止まる', x: 0.10, d: 0.6, h: 0.20 },
     { id: 'back', nm: '行ったり来たりして止まる', x: 0.20, d: 0.3, h: 0.40 },
     { id: 'custom', nm: 'カスタム' },
   ];
   const SL = [
     { key: 'x', nm: 'ばねの縮み', unit: 'm', min: 0.05, max: 0.30, step: 0.01 },
-    { key: 'd', nm: '粗い面の長さ', unit: 'm', min: 0, max: 1.0, step: 0.1 },
+    { key: 'd', nm: '粗い面の長さ', unit: 'm', min: 0, max: 0.6, step: 0.1 },
     { key: 'h', nm: '斜面の高さ', unit: 'm', min: 0, max: 0.8, step: 0.05 },
   ];
   const PT = { A: 'ばねを離れた所', B: '斜面の下', C: '斜面の上' };
@@ -57,8 +57,9 @@
   const X = x => x * U, Y = y => -y * U;
   const xEnd = G.foot + G.run + G.plat;
   const pal = () => dark
-    ? { bg: '#0e1210', ink: '#f2f2ea', grey: '#8f968c', hi: '#ffd84d', fill: '#1d2420' }
-    : { bg: '#ffffff', ink: '#151515', grey: '#8a8a8a', hi: '#c62828', fill: '#ffffff' };
+    // 灰色は黒地で暗すぎると後ろの席から読めない（初見のレビュー 2026-11-17）ので明るめ
+    ? { bg: '#0e1210', ink: '#f2f2ea', grey: '#c3c8bf', hi: '#ffd84d', fill: '#1d2420' }
+    : { bg: '#ffffff', ink: '#151515', grey: '#6f6f6f', hi: '#c62828', fill: '#ffffff' };
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
   const n1 = v => +v.toFixed(1);
   function courseSVG() {
@@ -66,7 +67,8 @@
     const ln = (x1, y1, x2, y2, col, sw, dash) => `<line x1="${n1(x1)}" y1="${n1(y1)}" x2="${n1(x2)}" y2="${n1(y2)}" stroke="${col}" stroke-width="${sw}" stroke-linecap="round"${dash ? ` stroke-dasharray="${dash}"` : ''}/>`;
     const tx = (x, y, s, fs, col, anchor = 'middle', wt = 700) => `<text x="${n1(x)}" y="${n1(y)}" font-size="${fs}" font-weight="${wt}" fill="${col}" text-anchor="${anchor}" font-family='${UIFONT}'>${esc(s)}</text>`;
     const head = (x, y, ux, uy, col, L, hw) => `<polygon points="${n1(x)},${n1(y)} ${n1(x - ux * L - uy * hw)},${n1(y - uy * L + ux * hw)} ${n1(x - ux * L + uy * hw)},${n1(y - uy * L - ux * hw)}" fill="${col}"/>`;
-    const top = Y(P.h + 0.62), bot = 36, left = -24, right = X(xEnd) + 125;
+    // 余白は最小に（上の空きは A・B・C の文字と左上の速さの表示のぶんだけ）
+    const top = Y(P.h + 0.55), bot = 36, left = -22, right = X(xEnd) + 92;
     let g = `<rect x="${left}" y="${top}" width="${right - left}" height="${bot - top}" fill="${c.bg}"/>`;
     // 基準面（指で上下に動かす）。床や台より先に描く（上に描くと、床と重なったとき床が点線に見えた）
     const yr = Y(P.ref);
@@ -95,8 +97,8 @@
     // 予想の点 A・B・C
     for (const k of 'ABC') {
       const q = ESim.where(P, cs.points[k]), on = pred.on && pred.pt === k;
-      g += ln(X(q.x), Y(q.y) - 6, X(q.x), Y(q.y) - 40, on ? c.hi : c.grey, 1.4, '4 4');
-      g += tx(X(q.x), Y(q.y) - 45, k, on ? 24 : 19, on ? c.hi : c.grey);
+      g += ln(X(q.x), Y(q.y) - 6, X(q.x), Y(q.y) - 31, on ? c.hi : c.grey, 1.4, '4 4');
+      g += tx(X(q.x), Y(q.y) - 36, k, on ? 22 : 18, on ? c.hi : c.grey);
     }
     // ばね（ジグザグ。台車の車体の高さ）
     const sx2 = X(G.L0 - cmp), sy = -13, n = 10, amp = 5.5;
@@ -177,12 +179,11 @@
     $('bRun').disabled = !running && (st.done === 'friction' || st.done === 'end');
   }
   function renderBars() {
-    $('presets').innerHTML = PRESETS.map(p => `<button type="button" data-p="${p.id}" class="${p.id === preset ? 'on' : ''}">${p.nm}</button>`).join('');
-    $('presets').querySelectorAll('button').forEach(b => b.onclick = () => setPreset(b.dataset.p));
+    $('preset').value = preset;
     $('custom').classList.toggle('hidden', preset !== 'custom');
     $('bPredict').classList.toggle('on', pred.on);
     $('predPts').classList.toggle('hidden', !pred.on);
-    $('predPts').innerHTML = '<span>どの点？</span>' + 'ABC'.split('').map(k => `<button type="button" data-pt="${k}" class="${pred.pt === k ? 'on' : ''}">${k} ${PT[k]}</button>`).join('');
+    $('predPts').innerHTML = '<span>どの点で予想？</span>' + 'ABC'.split('').map(k => `<button type="button" data-pt="${k}" class="${pred.pt === k ? 'on' : ''}">${k} ${PT[k]}</button>`).join('');
     $('predPts').querySelectorAll('button').forEach(b => b.onclick = () => {
       pred.pt = b.dataset.pt; resetRun(); renderBars(); render();
       msg(`${pred.pt} の点を通るときの棒を、下の図に指でかいてから「走らせる」。`);
@@ -251,6 +252,10 @@
   document.addEventListener('dblclick', e => e.preventDefault());
   // 向きを変えた・全画面にしたとき、図を描き直す（スマホの幅かどうかで矢印の文の置き場所が変わる）
   window.addEventListener('resize', () => render());
+
+  /* 場面はプルダウン（ボタンを 5 つ並べると 1 行を取り、図が小さくなった） */
+  $('preset').innerHTML = PRESETS.map(p => `<option value="${p.id}">${p.nm}</option>`).join('');
+  $('preset').addEventListener('change', e => setPreset(e.target.value));
 
   /* カスタムのスライダー */
   $('custom').innerHTML = SL.map(s => `<label class="sl"><span class="nm">${s.nm}</span><span class="val" id="v_${s.key}"></span>` +
