@@ -3,10 +3,14 @@
  * 場面はプルダウンから選ぶ。4 つのまとまり（重力 / ばね / ばねと重力 / 粗い面）に分ける。値は ⚙ で動かせる。
  * 系はどの場面でも選べる: ばねを系に入れるか（ばねのある場面）、地球を系に入れるか（鉛直の場面だけ。ほかは地球をいつも入れる）。
  *   系の外の力（ばねの弾性力・重力・摩擦力）がした仕事は、棒にせず「系の外」から出入りする矢印。
+ *   コースには系を黄色の細い点線で囲む（地球を入れるときは地面ごと。ばねを外すとそこだけへこむ）。文字は添えない。
+ * 力の矢印（橙）: 系の外から仕事をする力だけ（＝棒グラフの仕事の矢印と 1 本ずつ対応）。垂直抗力は描かない。
+ *   長さは力ごとの縮尺: 重力・摩擦力はいつも同じ長さ、ばねの弾性力はその場面の最大を同じ長さにして比例。
+ *   鉛直ばね振り子で重力とばねの弾性力を両方描くときだけ共通の縮尺（つり合いの位置で同じ長さ）。
  * 棒グラフは「はじめ ｜ いま」。矢印の箱の値はそれまでの合計。
- * 予想: 点を選ぶ → 棒を指でかく → 走らせる → その点で止まる。予想は「いま」の棒に黄色の点線の枠で重ねる。
+ * 予想の機能はやめた（画面が汚れる。先生の判断 2026-11-18）。予想する点のデータは simcore.js に残してある。
  * 基準面の点線は指で上下できる（物体より上にすると重力の棒は負）。
- * URL: ?test で自己テスト（body の data-test）。?s=場面&t=秒&ref=&pt=A&nospring&noearth&light で見本の画面
+ * URL: ?test で自己テスト（body の data-test）。?s=場面&t=秒&ref=&nospring&noearth&noforce&light で見本の画面
  */
 (function () {
   'use strict';
@@ -20,8 +24,7 @@
   let scene = SC[0], P = {}, W = null, scanR = null, ref = 0, scale = null;
   const sys = { spring: true, earth: true };
   let dark = !qs.has('light'), adj = false;
-  let st = null, st0 = null, running = false, slow = false, last = 0, trail = [];
-  const pred = { on: false, pt: null, val: null, shown: false, atPt: false };
+  let st = null, st0 = null, running = false, slow = false, last = 0, trail = [], showF = !qs.has('noforce');
 
   const fmt2 = v => { const a = Math.abs(v); if (a < 0.005) return '0'; const t = a >= 100 ? String(Math.round(a)) : String(+a.toPrecision(2)); return (v < 0 ? '−' : '') + (a < 10 && !t.includes('.') ? t + '.0' : t); };
   const hasSpring = () => !!W.spring;
@@ -29,7 +32,6 @@
   const springIn = () => hasSpring() && sys.spring;
   const earthIn = () => !scene.vertical || sys.earth;
   const keys = () => ['K', ...(springIn() ? ['Us'] : []), ...(earthIn() ? ['Ug'] : [])];
-  const point = id => W.points.find(p => p.id === id);
 
   /* 目盛り: 走るあいだ動かさない。先に最後まで動かして調べた値の幅（scan）から、1 目盛りを 1・2・5 × 10ⁿ で決める */
   function calcScale() {
@@ -51,8 +53,9 @@
   const R_BALL = 0.1;
   const pal = () => dark
     // 灰色は黒地で暗すぎると後ろの席から読めない（初見のレビュー 2026-11-17）ので明るめ
-    ? { bg: '#0e1210', ink: '#f2f2ea', grey: '#c3c8bf', hi: '#ffd84d', fill: '#1d2420' }
-    : { bg: '#ffffff', ink: '#151515', grey: '#6f6f6f', hi: '#c62828', fill: '#ffffff' };
+    // sys: 系の囲み（黒地は黄色、白地は濃い黄色）。force: 力の矢印（黒地は橙、白地は濃い橙）
+    ? { bg: '#0e1210', ink: '#f2f2ea', grey: '#c3c8bf', fill: '#1d2420', sys: '#ffd84d', force: '#ff7a59' }
+    : { bg: '#ffffff', ink: '#151515', grey: '#6f6f6f', fill: '#ffffff', sys: '#b8860b', force: '#d9531e' };
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
   const n1 = v => +v.toFixed(1);
   const ln = (x1, y1, x2, y2, col, sw, dash) => `<line x1="${n1(x1)}" y1="${n1(y1)}" x2="${n1(x2)}" y2="${n1(y2)}" stroke="${col}" stroke-width="${sw}" stroke-linecap="round"${dash ? ` stroke-dasharray="${dash}"` : ''}/>`;
@@ -83,7 +86,8 @@
     if (d.wall) { xs.push(d.wall.x - 0.05); ys.push(d.wall.y2); }
     if (d.ceil) { xs.push(d.ceil.x1, d.ceil.x2); ys.push(d.ceil.y + 0.08); }
     (d.dims || []).forEach(m => xs.push(m.x - 0.05, m.x + (m.x > 0 ? 0.62 : 0)));
-    const top = Math.max(...ys) + (scene.vertical ? 0.42 : 0.55), bot = Math.min(...ys) - 0.36;
+    // 下は「粗い面」の字（床の 0.30 下）と系の囲みの線が重ならないだけあける
+    const top = Math.max(...ys) + (scene.vertical ? 0.42 : 0.55), bot = Math.min(...ys) - 0.42;
     return { left: X(Math.min(...xs)) - 22, right: X(Math.max(...xs)) + 22, top: Y(top), bot: Y(bot) };
   }
   function courseSVG() {
@@ -94,7 +98,8 @@
     g += ln(F.left + 2, yr, F.right - 4, yr, c.grey, 2, '7 5');
     // 文字は右端の線の下（鉛直の場面は左端。右に置くと物体に重なった）
     const yl = ref < 0 || yr + 26 > F.bot ? yr - 6 : yr + 21;
-    g += scene.vertical ? tx(F.left + 4, yl, '基準面 ⇕', 16, c.grey, 'start') : tx(F.right - 4, yl, '基準面 ⇕', 16, c.grey, 'end');
+    // 端から少し内側に（外側には系の囲みの線が通る）
+    g += scene.vertical ? tx(F.left + 12, yl, '基準面 ⇕', 16, c.grey, 'start') : tx(F.right - 12, yl, '基準面 ⇕', 16, c.grey, 'end');
     // 飛んだ道すじ（点）
     trail.forEach(([x, y]) => { g += `<circle cx="${n1(X(x))}" cy="${n1(Y(y) - (scene.body === 'ball' ? R_BALL * U : 0))}" r="2.4" fill="${c.grey}"/>`; });
     // 床（下に短い斜線）
@@ -142,12 +147,7 @@
       const lab = `${fmt2(m.y2 - m.y1)} m`;
       g += m.x < 0 ? tx(dx - 6, (y1 + y2) / 2 + 6, lab, 17, c.ink, 'end') : tx(dx + 6, (y1 + y2) / 2 + 6, lab, 17, c.ink, 'start');
     });
-    // 予想の点（場所の点だけ。「いちばん高い所」などのできごとの点は描かない）
-    W.points.filter(p => p.s != null).forEach(p => {
-      const q = ESim.at(W.tr, p.s), on = pred.on && pred.pt === p.id, col = on ? c.hi : c.grey;
-      if (scene.vertical) g += ln(X(q.x) - 16, Y(q.y), X(q.x) - 34, Y(q.y), col, 1.4, '4 4') + tx(X(q.x) - 38, Y(q.y) + 7, p.id, on ? 22 : 18, col, 'end');
-      else g += ln(X(q.x), Y(q.y) - 6, X(q.x), Y(q.y) - 31, col, 1.4, '4 4') + tx(X(q.x), Y(q.y) - 36, p.id, on ? 22 : 18, col);
-    });
+    // A・B などの点の印は描かない（予想の機能をやめたので使い道がない。先生の判断 2026-11-18）
     // ばね
     if (W.spring) {
       const sp = W.spring;
@@ -188,12 +188,78 @@
       const ex = bx + ux * L, ey = by + uy * L;
       g += ln(bx, by, ex - ux * 6, ey - uy * 6, c.ink, 3) + head(ex, ey, ux, uy, c.ink, 9, 4.5);
     }
+    if (showF) g += forceArrows(c, o, bc);
+    g += sysLine(c, F, o, bc);
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${n1(F.left)} ${n1(F.top)} ${n1(F.right - F.left)} ${n1(F.bot - F.top)}" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
+  }
+  // ばねの先（物体の側の端）の道のりの位置
+  const springEnd = sp => st.ph === 'fly' ? sp.L0 : (sp.attached ? st.s - sp.off : Math.min(st.s - sp.off, sp.L0));
+
+  /* 力の矢印: 系の外から仕事をする力だけ（棒グラフの仕事の矢印と 1 本ずつ対応）。垂直抗力は仕事をしないので描かない。
+   * 作用点の黒丸から描き、まわりを背景の色でふちどる（台車の線と重なっても読める）。
+   * 長さは力ごとの縮尺（N の値やほかの力との比は気にしない。先生の判断 2026-11-18）:
+   *   重力・摩擦力はいつも F_LMAX。ばねの弾性力はその場面でいちばん大きいときを F_LMAX にして比例。
+   *   鉛直ばね振り子で重力とばねの弾性力を両方描くときだけ共通の縮尺（つり合いの位置で同じ長さになる）。 */
+  const F_LMAX = 60;   // 台車の幅の 2 倍
+  function forceArrows(c, o, bc) {
+    const mg = W.m * ESim.g, sp = W.spring, list = [];   // [作用点 x, y, 向き ux, uy（SVG）, 長さ]
+    const FsMax = sp ? Math.sqrt(2 * sp.k * scanR.Us[1]) : 0;
+    const both = scene.vertical && !earthIn() && sp && !springIn(), common = Math.max(FsMax, mg);
+    if (!earthIn()) list.push([X(bc.x), Y(bc.y), 0, 1, both ? mg / common * F_LMAX : F_LMAX]);   // 重力: 重心から
+    if (st.ph !== 'fly') {
+      const p = ESim.at(W.tr, st.s);
+      if (sp && !springIn()) {   // ばねの弾性力: ばねがつく面（台車の左の面のばねの高さ／おもりの上の面）
+        const F = ESim.springAt(W, st.s).F, sg = Math.sign(F), L = Math.abs(F) / (both ? common : FsMax) * F_LMAX;
+        if (scene.vertical) list.push([X(st.x), Y(st.y + sp.off), 0, sg, L]);   // 鉛直の道は下向きが s の正
+        else { const a = ESim.at(W.tr, st.s - sp.off); list.push([X(a.x + o.nx * sp.h), Y(a.y + o.ny * sp.h), p.tx * sg, -p.ty * sg, L]); }
+      }
+      if (ESim.onRough(W, st.s) && st.v !== 0) {   // 摩擦力: 面と接する所。動く向きと逆
+        const sg = -Math.sign(st.v);
+        list.push([X(o.x), Y(o.y), p.tx * sg, -p.ty * sg, F_LMAX]);
+      }
+    }
+    let halo = '', ink = '';
+    list.forEach(([x, y, ux, uy, L]) => {
+      if (!(L >= 12)) return;   // 短すぎる矢印は矢じりだけになるので描かない（ばねが自然の長さに近いとき）
+      const ex = x + ux * L, ey = y + uy * L;
+      halo += `<circle cx="${n1(x)}" cy="${n1(y)}" r="5.4" fill="${c.bg}"/>` + ln(x, y, ex - ux * 8, ey - uy * 8, c.bg, 6.6) + head(ex + ux * 1.8, ey + uy * 1.8, ux, uy, c.bg, 13.6, 7.4);
+      ink += `<circle cx="${n1(x)}" cy="${n1(y)}" r="3.2" fill="${c.force}"/>` + ln(x, y, ex - ux * 8, ey - uy * 8, c.force, 2.4) + head(ex, ey, ux, uy, c.force, 10, 5.5);
+    });
+    return ink ? `<g class="force">${halo}${ink}</g>` : '';
+  }
+
+  /* 系の囲み: 黄色の細い点線。「系」「地球」の字は添えない（先生が説明する）。
+   *   地球を入れるとき: 地面ごと囲む（枠いっぱいの四角）。ばねを外したら、ばねのところだけ外へへこませる。
+   *   地球を外すとき（鉛直の場面）: 物体（とばね）だけを囲む。 */
+  function sysLine(c, F, o, bc) {
+    const pad = 9, sp = W.spring, spOut = sp && !springIn();
+    const attr = `fill="none" stroke="${c.sys}" stroke-width="1.6" stroke-dasharray="7 5" stroke-linejoin="round" class="sysline"`;
+    const path = pts => `<path d="M${pts.map(([x, y]) => `${n1(x)},${n1(y)}`).join(' L')} Z" ${attr}/>`;
+    if (earthIn()) {
+      // 上は左上の「速さ・高さ」の字にかからないよう少し下げる
+      const L = F.left + 5, R = F.right - 5, T = F.top + 24, B = F.bot - 5;
+      if (!spOut) return path([[L, T], [R, T], [R, B], [L, B]]);
+      if (!scene.vertical) {   // 上から、壁とばねの先のあいだを、床（台）の面のすぐ上まで切り込む
+        const a = ESim.at(W.tr, 0), b = ESim.at(W.tr, springEnd(sp));
+        const touch = st.ph !== 'fly' && (sp.attached || st.s - sp.off <= sp.L0 + 1e-9);
+        const x0 = X(W.deco.wall ? W.deco.wall.x : a.x) + 3, x1 = X(b.x) + (touch ? -1 : 3), yb = Y(a.y) - 3;
+        return path([[L, T], [x0, T], [x0, yb], [x1, yb], [x1, T], [R, T], [R, B], [L, B]]);
+      }
+      // 鉛直: 左から、天井とおもりのあいだを切り込む
+      const yt = Y(W.tr.pts[0][1]) + 3, yb = Y(st.y + sp.off) - 1, xr = X(0) + 9 + pad;
+      return path([[L, T], [R, T], [R, B], [L, B], [L, yb], [xr, yb], [xr, yt], [L, yt]]);
+    }
+    let x0, x1, y0, y1;
+    if (scene.body === 'ball') { const r = R_BALL * U + pad; x0 = X(bc.x) - r; x1 = X(bc.x) + r; y0 = Y(bc.y) - r; y1 = Y(bc.y) + r; }
+    else { const cx = X(o.x), cy = Y(o.y); x0 = cx - 11 - pad; x1 = cx + 11 + pad; y0 = cy - 6 - pad; y1 = cy + 6 + pad; }   // おもり
+    if (sp && !spOut) { y0 = Y(W.tr.pts[0][1]) + 4; x0 = Math.min(x0, X(0) - 9 - pad); x1 = Math.max(x1, X(0) + 9 + pad); }   // ばねも囲む（天井＝地球は外）
+    return `<rect x="${n1(x0)}" y="${n1(y0)}" width="${n1(x1 - x0)}" height="${n1(y1 - y0)}" rx="12" ${attr}/>`;
   }
 
   /* ── 棒グラフ ── */
-  // 仕事の矢印は太く大きく（先生の指摘 2026-11-18「矢印が小さすぎて見づらい」）
-  const CH = () => ({ theme: dark ? 'chalk' : 'color', fs: 5.6, fsName: 4.6, fsTitle: 5.6, fsWork: 4.8, fsBox: 6.6, arrowK: 2.3, workDepth: 0.62, fmt: 'sig2', ref: true, barGap: 9, sepGap: 6, lwk: 1.7, keys: keys() });
+  // 仕事の矢印は太く大きく（先生の指摘 2026-11-18「矢印が小さすぎて見づらい」）。
+  // 矢じりは広く（幅が線の約 2.7 倍。1.4 倍では線と変わらず向きが読みにくかった）。演習アプリの矢印は変えない
+  const CH = () => ({ theme: dark ? 'chalk' : 'color', fs: 5.6, fsName: 4.6, fsTitle: 5.6, fsWork: 4.8, fsBox: 6.6, arrowK: 2.3, headK: 1.3, headW: 0.6, workDepth: 0.62, fmt: 'sig2', ref: true, barGap: 9, sepGap: 6, lwk: 1.7, keys: keys() });
   // スマホの幅では矢印の下の文を図に入れず、図の下に出す（文の幅のぶん棒グラフが小さくなった）
   const narrow = () => window.innerWidth < 600;
   const stateOf = (s, title) => { const e = ESim.energies(W, s, ref), o = { title }; keys().forEach(k => { o[k] = rd(e[k]); }); return o; };
@@ -207,38 +273,17 @@
     const ks = keys(), diff = ks.reduce((a, k) => a + rd(e[k]) - rd(e0[k]), 0), res = diff - raw.reduce((a, r) => a + r.w, 0);
     const big = raw.filter(r => r.w !== 0).sort((a, b) => (a.who === '摩擦力') - (b.who === '摩擦力') || Math.abs(b.w) - Math.abs(a.w))[0];
     if (big && Math.abs(res) > 1e-9) big.w = +(big.w + res).toPrecision(6);
-    return raw.map(({ w, who, sign }) => {
-      const text = `${who}が${nm}に\n${(w || sign) > 0 ? '正' : '負'}の仕事をした`;
-      return w ? { W: w, who, text: narrow() ? null : text, cap: text.replace('\n', '') } : { W: 0, who, ghost: true, text: narrow() ? null : text };
+    // 矢印の下の文は「摩擦力が台車に」だけ。正か負かは矢印の向きと箱の符号で分かる（同じことを何か所でも言わない。先生の指摘 2026-11-18）
+    return raw.map(({ w, who }) => {
+      const text = `${who}が${nm}に`;
+      return w ? { W: w, who, text: narrow() ? null : text, cap: text } : { W: 0, who, ghost: true, text: narrow() ? null : text };
     });
   }
   const worksOpt = list => list.length === 0 ? [] : list.length === 1 ? [list[0]] : [list];
   const chartOpt = extra => Object.assign(CH(), { unit: scale.unit, max: scale.max, min: scale.min }, extra || {});
-  // 予想の棒を「いま」の場面に黄色の点線の枠で重ねる
-  function predOverlay(states, opt) {
-    if (!pred.on || !pred.val) return '';
-    const L = EBar.layout(states, opt), T = EBar.THEMES[opt.theme], ks = keys(), sw = 0.9;
-    const v = {}; ks.forEach(k => { v[k] = pred.val[k] || 0; }); v.sum = ks.reduce((a, k) => a + v[k], 0);
-    let s = '';
-    [...ks, 'sum'].forEach((k, j) => {
-      const h = v[k] / L.unit * L.mpu, x = L.barX(1, j), y = Math.min(L.baseY, L.baseY - h);
-      if (Math.abs(h) < 0.01) s += `<line x1="${x}" y1="${L.baseY}" x2="${x + L.bw}" y2="${L.baseY}" stroke="${T.answer}" stroke-width="${sw * 1.6}"/>`;
-      else s += `<rect x="${x - 0.8}" y="${y}" width="${L.bw + 1.6}" height="${Math.abs(h)}" fill="none" stroke="${T.answer}" stroke-width="${sw}" stroke-dasharray="1.6 1.0"/>`;
-    });
-    s += `<text x="${L.xPanel(1) + L.panelW}" y="${L.top - 1.5}" font-size="4.2" font-weight="700" fill="${T.answer}" text-anchor="end" font-family='${UIFONT}'>┅ 予想</text>`;
-    return s;
+  function chartSVG() {
+    return EBar.chart([stateOf(st0, 'はじめ'), stateOf(st, 'いま')], chartOpt({ works: worksOpt(worksList(st)) }));
   }
-  function liveChart() {
-    const states = [stateOf(st0, 'はじめ'), stateOf(st, pred.atPt ? `${pred.pt} の点` : 'いま')];
-    const opt = chartOpt({ works: worksOpt(worksList(st)) });
-    opt.extra = predOverlay(states, opt);
-    return EBar.chart(states, opt);
-  }
-  // 予想をかく図（走らせる前）。「いま」の場所に、指でかく棒
-  const predStates = () => [stateOf(st0, 'はじめ'), Object.assign({ title: `${pred.pt} の点（予想）`, answer: true }, pred.val)];
-  const drawing = () => pred.on && pred.pt && st.t === 0 && !running;
-  const predOpt = () => chartOpt({ works: worksOpt(worksList(st0)) });
-  function chartSVG() { return drawing() ? EBar.chart(predStates(), predOpt()) : liveChart(); }
 
   function fit(svgHtml) {   // 枠いっぱいに縮める（縦横比は保つ）
     return svgHtml.replace(/<svg([^>]*?) width="[^"]*" height="[^"]*"/, '<svg$1 preserveAspectRatio="xMidYMid meet"');
@@ -246,9 +291,8 @@
   function render() {
     $('course').innerHTML = courseSVG();
     $('chart').innerHTML = fit(chartSVG());
-    $('chart').classList.toggle('draw', drawing());
     // スマホ: 矢印の文は図の下に
-    const caps = narrow() && !drawing() ? worksList(st).filter(w => !w.ghost).map(w => `${w.W > 0 ? '↓' : '↑'} ${w.cap}（${w.W > 0 ? '+' : '−'}${fmt2(Math.abs(w.W))} J）`) : [];
+    const caps = narrow() ? worksList(st).filter(w => !w.ghost).map(w => `${w.W > 0 ? '↓' : '↑'} ${w.cap}（${w.W > 0 ? '+' : '−'}${fmt2(Math.abs(w.W))} J）`) : [];
     $('fricCap').innerHTML = caps.map(esc).join('<br>');
     $('fricCap').classList.toggle('hidden', !caps.length);
     const e = ESim.energies(W, st, ref);
@@ -262,16 +306,17 @@
     $('stage').classList.toggle('tall', (F.bot - F.top) / (F.right - F.left) > 0.8);
   }
   function renderSys() {
-    // 系: 物体はいつも入れる。ばねは選べる（ばねのある場面）。地球は鉛直の場面だけ選べる
-    const chip = (lab, on, k) => k ? `<button type="button" class="chip${on ? ' on' : ''}" data-k="${k}" aria-pressed="${on}">${lab}</button>` : `<span class="chip lock">${lab}</span>`;
-    let h = `<span class="lab">系：</span>${chip(W.bodyNm, true)}`;
-    if (hasSpring()) h += chip('ばね', sys.spring, 'spring');
-    h += chip('地球', earthIn(), scene.vertical ? 'earth' : null);
+    // 系: 物体はいつも入れる。ばねは選べる（ばねのある場面）。地球は鉛直の場面だけ選べる。外せないものは薄いチェック欄
+    const cb = (lab, on, k) => k
+      ? `<button type="button" class="cb${on ? ' on' : ''}" data-k="${k}" aria-pressed="${on}"><span class="bx">${on ? '✓' : ''}</span>${lab}</button>`
+      : `<span class="cb on lock" aria-disabled="true"><span class="bx">✓</span>${lab}</span>`;
+    let h = `<span class="lab">系に含めるもの：</span>${cb(W.bodyNm, true)}`;
+    if (hasSpring()) h += cb('ばね', sys.spring, 'spring');
+    h += cb('地球', earthIn(), scene.vertical ? 'earth' : null);
     $('sys').innerHTML = h;
     $('sys').querySelectorAll('button').forEach(b => b.onclick = () => {
       sys[b.dataset.k] = !sys[b.dataset.k];
       calcScale();
-      if (pred.on) pred.val = { K: 0, Us: 0, Ug: 0 };
       renderSys(); render();
     });
   }
@@ -279,13 +324,8 @@
     $('preset').value = scene.id;
     $('bAdj').classList.toggle('on', adj);
     $('custom').classList.toggle('hidden', !adj);
-    $('bPredict').classList.toggle('on', pred.on);
-    $('predPts').classList.toggle('hidden', !pred.on);
-    $('predPts').innerHTML = '<span>どこで予想？</span>' + W.points.map(p => `<button type="button" data-pt="${p.id}" class="${pred.pt === p.id ? 'on' : ''}">${p.id} ${p.nm}</button>`).join('');
-    $('predPts').querySelectorAll('button').forEach(b => b.onclick = () => {
-      pred.pt = b.dataset.pt; resetRun(); renderBars(); render();
-      msg(`${pred.pt}（${point(pred.pt).nm}）の棒を、下の図に指でかいてから「走らせる」。`);
-    });
+    $('bForce').classList.toggle('on', showF);
+    $('bForce').setAttribute('aria-pressed', showF);
     $('bTheme').textContent = dark ? '☀' : '🌙';
     document.documentElement.classList.toggle('dark', dark);
     document.querySelector('meta[name=theme-color]').content = dark ? '#0e1210' : '#fbfbf7';
@@ -310,21 +350,17 @@
     W.bodyNm = scene.bodyNm;
     scanR = ESim.scan(W);
     ref = newScene ? W.ref0 : Math.max(W.refRange[0], Math.min(W.refRange[1], ref));
-    if (pred.on && pred.pt && !point(pred.pt)) pred.pt = null;
     calcScale(); resetRun(); layoutClass(); renderBars(); render();
   }
   function setScene(id) {
     scene = SC.find(s => s.id === (ALIAS[id] || id)) || SC[0];
     P = Object.assign({}, scene.def);
-    pred.pt = null; pred.val = null;
     rebuild(true); renderCustom();
-    if (pred.on) msg('予想する所を選んでください。');
   }
 
   /* ── 動かす ── */
-  const target = () => pred.on && pred.pt && !pred.shown ? point(pred.pt) : null;
   function advance(dt) {
-    ESim.step(W, st, dt, target());
+    ESim.step(W, st, dt, null);
     if (st.ph === 'fly' && (!trail.length || st.t - trail.t > 0.035)) { trail.push([st.x, st.y]); trail.t = st.t; }
   }
   function frame(now) {
@@ -335,36 +371,25 @@
     render();
     if (running) requestAnimationFrame(frame);
   }
+  // 文は何が起きたかだけ（摩擦力の仕事の値は矢印の箱に出ているので書かない）
   function done() {
-    const fw = worksList(st).find(w => w.who === '摩擦力' && w.W);   // 矢印の箱と同じ値
-    const fr = fw ? `摩擦力が${W.bodyNm}に ${fmt2(Math.abs(fw.W))} J の負の仕事をしました。` : '';
-    const p = point(pred.pt);
-    if (st.done === 'stop') msg(`粗い面の上で止まりました。${fr}`);
-    else if (st.done === 'end') msg(`右端に着きました。${fr}`);
-    else if (st.done === 'land') msg(`床に着く直前で止めています。${fr}`);
-    else if (st.done === 'target') { pred.shown = true; pred.atPt = true; msg(`${pred.pt}（${p.nm}）で止めました。黄色の点線（予想）と比べよう。`); st.done = null; }
-    else if (st.done === 'short') { pred.shown = true; msg(`${pred.pt}（${p.nm}）まで上がれずに引き返しました（いちばん高い所で止めています）。`); st.done = null; }
+    if (st.done === 'stop') msg('粗い面の上で止まりました。');
+    else if (st.done === 'end') msg('右端に着きました。');
+    else if (st.done === 'land') msg('床に着く直前で止めています。');
   }
   function msg(t) { $('msg').textContent = t; }
   function resetRun() {
-    running = false; st = ESim.init(W); st0 = ESim.init(W); trail = []; pred.shown = false; pred.atPt = false; msg('');
-    if (pred.on && pred.pt) pred.val = pred.val || { K: 0, Us: 0, Ug: 0 };
+    running = false; st = ESim.init(W); st0 = ESim.init(W); trail = []; msg('');
   }
 
   $('bRun').onclick = () => {
     if (running) { running = false; render(); return; }
-    if (pred.on && !pred.pt) { msg('予想する所を選んでください。'); return; }
     if (st.t === 0) msg('');
-    pred.atPt = false;
     running = true; last = performance.now(); requestAnimationFrame(frame); render();
   };
   $('bReset').onclick = () => { resetRun(); render(); };
   $('bSlow').onclick = () => { slow = !slow; $('bSlow').classList.toggle('on', slow); };
-  $('bPredict').onclick = () => {
-    pred.on = !pred.on; pred.val = null; if (!pred.on) pred.pt = null;
-    resetRun(); renderBars(); render();
-    if (pred.on) msg('予想する所を選んでください。');
-  };
+  $('bForce').onclick = () => { showF = !showF; renderBars(); render(); };
   $('bAdj').onclick = () => { adj = !adj; renderBars(); };
   $('bTheme').onclick = () => { dark = !dark; renderBars(); render(); };
 
@@ -405,35 +430,11 @@
     box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
   })();
 
-  /* 予想の棒を指でかく（「はじめ」の右の場面の棒。1 目盛り刻み。重力だけ負にもできる） */
-  (function bindPred() {
-    const box = $('chart'); let col = null;
-    const set = e => {
-      const L = EBar.layout(predStates(), predOpt()), k = keys()[col];
-      let v = Math.round((L.baseY - toSvg(box.querySelector('svg'), e).y) / L.mpu) * L.unit;
-      v = Math.min(L.unitsUp * L.unit, Math.max(k === 'Ug' ? -L.unitsDown * L.unit : 0, v));
-      pred.val[k] = +v.toPrecision(6);
-      $('chart').innerHTML = fit(chartSVG());
-    };
-    box.addEventListener('pointerdown', e => {
-      if (!drawing()) return;
-      const svg = box.querySelector('svg'), L = EBar.layout(predStates(), predOpt()), p = toSvg(svg, e); col = null;
-      for (let j = 0; j < keys().length; j++) { const x = L.barX(1, j); if (p.x >= x - L.gap / 2 && p.x <= x + L.bw + L.gap / 2) col = j; }
-      if (col === null) return;
-      e.preventDefault(); try { box.setPointerCapture(e.pointerId); } catch (_) { /* 古いブラウザ */ }
-      set(e);
-    });
-    box.addEventListener('pointermove', e => { if (col !== null) set(e); });
-    const up = () => { col = null; };
-    box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
-  })();
-
-  // 見本の画面: ?s=場面&t=秒&ref=&pt=&nospring&noearth
+  // 見本の画面: ?s=場面&t=秒&ref=&nospring&noearth&noforce
   if (qs.has('nospring')) sys.spring = false;
   if (qs.has('noearth')) sys.earth = false;
   setScene(qs.get('s') || qs.get('p') || 'sfclimb');
   if (qs.has('ref')) { ref = +qs.get('ref'); calcScale(); }
-  if (qs.has('pt')) { pred.on = true; pred.pt = qs.get('pt'); resetRun(); pred.val = { K: 2, Us: 0, Ug: 1 }; renderBars(); }
   if (qs.has('t')) { const T = +qs.get('t'); while (!st.done && st.t < T) advance(1 / 60); if (st.done) done(); }
   render();
 
@@ -458,6 +459,8 @@
       if (errMax > 1e-6) ng.push(`${s.id}: 力学的エネルギーと摩擦力の仕事の和が変わる ${errMax}`);
       render();
       if (!/<svg/.test($('course').innerHTML) || !/<svg/.test($('chart').innerHTML)) ng.push(`${s.id}: 図が出ない`);
+      if (!/class="sysline"/.test($('course').innerHTML)) ng.push(`${s.id}: 系の囲みが出ない`);
+      if (/NaN/.test($('course').innerHTML)) ng.push(`${s.id}: コースの図に NaN`);
     }
     const near = (a, b, tol, what) => { if (!(Math.abs(a - b) <= tol)) ng.push(`${what} ${a}（${b} のはず）`); };
     near(ys.fall.speed, Math.sqrt(2 * 9.8 * 1.0), 1e-3, '自由落下: 床に着く速さ');
@@ -470,13 +473,28 @@
     near(ys.slrough.Wf, 9.8 * 0.25, 1e-3, '斜面 → 粗い面: 摩擦力の仕事');
     near(ys.vrough.Wf, 9.8 * 0.5, 1e-3, '斜面 → 粗い底面: 摩擦力の仕事');
     // 曲面から飛び出す: 飛んでいちばん高い所 = 0.25 + (v sin45°)²/2g、v² = 2g(0.80 − 0.25)
-    setScene('jump'); pred.on = true; pred.pt = 'B'; resetRun(); pred.val = { K: 2, Us: 0, Ug: 5 }; runAll(); done(); render();
-    near(st.y, 0.25 + 2 * 9.8 * 0.55 * 0.5 / (2 * 9.8), 2e-3, '曲面から飛び出す: いちばん高い所');
-    if (!pred.atPt || !/B の点/.test($('chart').innerHTML) || !/予想/.test($('chart').innerHTML)) ng.push('予想（できごとの点）で比べられない');
-    pred.on = false; pred.pt = null;
-    // 摩擦の矢印
-    setScene('srough'); runAll(); render();
+    setScene('jump'); { let ym = -Infinity, n = 0; while (!st.done && n++ < 1500) { advance(1 / 240); if (st.ph === 'fly') ym = Math.max(ym, st.y); }
+      near(ym, 0.25 + 2 * 9.8 * 0.55 * 0.5 / (2 * 9.8), 2e-3, '曲面から飛び出す: いちばん高い所'); }
+    // 摩擦の矢印（文は「摩擦力が台車に」だけ。正・負の文は出さない）と、止まったときの文
+    setScene('srough'); runAll(); done(); render();
     if (!/摩擦力が台車に/.test($('chart').innerHTML)) ng.push('摩擦の矢印が出ない');
+    if (/の仕事をした/.test($('chart').innerHTML)) ng.push('矢印の下に「正／負の仕事をした」が残っている');
+    if ($('msg').textContent !== '粗い面の上で止まりました。') ng.push(`止まったときの文: ${$('msg').textContent}`);
+    // 力の矢印: 系の外から仕事をする力だけ
+    const hasF = () => /class="force"/.test(courseSVG());
+    const stepTo = (T) => { while (!st.done && st.t < T) advance(1 / 240); };
+    setScene('srough'); stepTo(0.01); if (hasF()) ng.push('ばねを系に入れているのに力の矢印が出る');
+    stepTo(0.3); if (!(ESim.onRough(W, st.s) && st.v !== 0)) ng.push('粗い面の上の時刻の見込みちがい'); else if (!hasF()) ng.push('粗い面の上で摩擦力の矢印が出ない');
+    sys.spring = false; setScene('srough'); stepTo(0.01); if (!hasF()) ng.push('ばねを系の外にしたのに弾性力の矢印が出ない');
+    showF = false; if (hasF()) ng.push('「力の矢印」を消しても出る'); showF = true;
+    sys.spring = true;
+    setScene('sclimb'); { let any = false; for (let i = 0; i < 60; i++) { stepTo(st.t + 0.02); if (hasF()) any = true; } if (any) ng.push('地球もばねも系に入れた斜面で力の矢印が出る'); }
+    setScene('fall'); stepTo(0.2); if (hasF()) ng.push('地球を系に入れた自由落下で重力の矢印が出る');
+    sys.earth = false; setScene('fall'); stepTo(0.2); if (!hasF()) ng.push('地球を外した自由落下で重力の矢印が出ない');
+    sys.earth = true;
+    // 系のチェック欄: 外せないものは薄い（ボタンにしない）
+    setScene('slope'); if ($('sys').querySelectorAll('.cb.lock').length !== 2 || $('sys').querySelector('button')) ng.push('斜面の場面のチェック欄（台車・地球は外せない）');
+    setScene('vosc'); if ($('sys').querySelectorAll('button.cb').length !== 2) ng.push('鉛直ばね振り子でばね・地球を選べない');
     // 系: ばねを系の外に → ばねの棒がなく、弾性力の正の仕事の矢印
     setScene('push'); sys.spring = false; calcScale(); runAll(); render();
     const ch = $('chart').innerHTML;
@@ -493,12 +511,6 @@
     // 基準面を台より上に: 重力の棒が負
     setScene('sfclimb'); ref = 0.6; calcScale(); render();
     if (!/−5\.9\sJ/.test($('chart').innerHTML)) ng.push('基準面を上げても重力の棒が負にならない');
-    // 予想: 場所の点（C 斜面の上）で止まる
-    setScene('sclimb'); pred.on = true; pred.pt = 'C'; resetRun(); pred.val = { K: 2, Us: 0, Ug: 2 };
-    if (!/C の点（予想）/.test(chartSVG())) ng.push('予想をかく図が出ない');
-    runAll(); done(); render();
-    if (!pred.atPt || !/C の点/.test($('chart').innerHTML)) ng.push('予想の点で比べられない');
-    pred.on = false; pred.pt = null;
     // 箱の値の合計 = 棒の合計の差（丸めた値どうし）。系の選び方を全部ためす
     for (const [id, sp, ea] of [['vosc', true, false], ['vosc', false, false], ['vosc', false, true], ['sfback', false, true], ['sfback', true, true], ['fall', true, false]]) {
       sys.spring = sp; sys.earth = ea; setScene(id);

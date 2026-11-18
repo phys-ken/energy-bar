@@ -28,13 +28,16 @@ button:disabled { opacity: .35; cursor: default; }
 .cell svg { display: block; width: 100%; height: auto; touch-action: none; }
 /* 速さ・高さはコースの左上に大きく（PhET の Energy Skate Park も速さは図の中に出す） */
 .readout { position: absolute; left: 6px; top: 2px; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
-.msg { min-height: 1.35em; font-size: 18px; color: var(--hi); font-weight: 700; line-height: 1.35; text-align: center; flex: 1 1 14em; }
-/* 系: 物体・ばね・地球。系に入れたものは塗り、外は点線の枠。物体（と斜面のある場面の地球）は選べない */
+/* 文は何が起きたかだけ。白（黄色は系の囲みに使う。先生の指摘 2026-11-18「黄色の文字こそ自明だから白でいい」） */
+.msg { min-height: 1.35em; font-size: 18px; color: var(--fg); font-weight: 700; line-height: 1.35; text-align: center; flex: 1 1 14em; }
+/* 系: 「系に含めるもの：☑台車 ☐ばね ☑地球」。□ は教室の後ろから見えるよう字と同じくらい大きく。
+ * 外せないもの（物体、鉛直でない場面の地球）は薄く。青く塗った丸いボタンは、決まりを知らないと読めなかった（2026-11-18） */
 .row2 { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
-.sys { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 18px; }
-.sys .chip { flex: none; min-height: 40px; min-width: 0; padding: 2px 12px; border-radius: 20px; font-size: 18px; border: 2px dashed var(--line); background: transparent; color: var(--dim); }
-.sys .chip.on { background: var(--on); border: 2px solid var(--on); color: #fff; }
-.sys .chip.lock { display: inline-flex; align-items: center; background: var(--btn); border: 2px solid var(--line); color: var(--fg); }
+.sys { display: flex; align-items: center; flex-wrap: wrap; gap: 0 14px; font-weight: 700; font-size: 18px; }
+.sys .cb { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; min-width: 0; padding: 0 2px; border: none; background: transparent; color: var(--fg); font-size: 1em; }
+.sys .cb .bx { flex: none; width: 1.5em; height: 1.5em; border: 3px solid var(--fg); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+.sys .cb.on .bx { background: var(--on); border-color: var(--on); color: #fff; }
+.sys .cb.lock { opacity: .45; cursor: default; }
 .stage, .side { display: flex; flex-direction: column; gap: 4px; }
 .fcap { margin: 0; font-size: 16px; font-weight: 700; text-align: center; }
 
@@ -50,6 +53,8 @@ button:disabled { opacity: .35; cursor: default; }
   #preset { flex: 1 1 100%; }
   .readout { font-size: 16px; }
   .msg { font-size: 15px; }
+  .sys { font-size: 15px; gap: 0 8px; }
+  .sys .cb .bx { border-width: 2px; }
 }
 
 /* 広い画面: 1 画面に収める（全画面・ホーム画面から開いたときも、ずれない） */
@@ -64,8 +69,8 @@ button:disabled { opacity: .35; cursor: default; }
   .cell svg { height: 100%; }
   .readout { font-size: clamp(20px, 3.4vh, 38px); }
   .msg { font-size: clamp(16px, 2.6vh, 28px); }
-  .sys, .sys .chip { font-size: clamp(16px, 2.4vh, 24px); }
-  .sys .chip { min-height: clamp(36px, 5vh, 52px); }
+  .sys { font-size: clamp(16px, 2.4vh, 24px); }
+  .sys .cb { min-height: clamp(40px, 5.5vh, 56px); }
   button, select { font-size: clamp(16px, 2.4vh, 24px); min-height: clamp(44px, 6.5vh, 64px); }
 }
 /* 16:9 でも上下に積む。左右に並べると、コースも棒グラフも幅で縮み、台車が約 135 px → 95 px に小さくなった（2026-11-17 に試した） */

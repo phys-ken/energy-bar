@@ -17,7 +17,7 @@
 | `js/tools.js` | 計算用紙（手書き）と電卓 |
 | `js/record.js` | 記録の QR①（`ENERGY-BAR RECORD v1`）と QR②（照合の sha256） |
 | `verify.html` `js/verify.js` | 先生用：提出画像の照合・重複の検出・CSV・問題の作り直し |
-| `sim.html` `js/sim.js` `css/sim.css` | シミュレーション（15 場面、系を選べる）。物理と場面の形は `lib/simcore.js` |
+| `sim.html` `js/sim.js` `css/sim.css` | シミュレーション（15 場面、系を選べる、系の囲み・力の矢印）。物理と場面の形は `lib/simcore.js` |
 | `proto/scratch.html` | 最初の試作 |
 | `samples/` | 図の見本を作るスクリプト（`node samples/make.js`、`node samples/scenes.js`） |
 
@@ -29,8 +29,9 @@
   （電卓・計算用紙・お金だけなら「読む」だけ・4 つの出題形式それぞれ全問正解で記録が本物になるか・書き換えを見抜くか）
 - 先生用ページ: 同じく `verify.html?test`
 - シミュレーション: 同じく `sim.html?test`（15 場面それぞれの終わり方・力学的エネルギーと摩擦力の仕事の和が一定・
-  落ちる速さ・曲面の高さ・飛んでいちばん高い所・摩擦力の仕事などを式の値と比べる・系の選び方で棒と矢印が変わる・矢印の値と棒の差がそろう・予想の点で止まる）。
-  `sim.html?s=場面&t=1.2[&ref=0.6][&pt=A][&nospring][&noearth][&light]` でその時刻まで進めた画面を出す（場面の名前は `lib/simcore.js` の `SCENES`）
+  落ちる速さ・曲面の高さ・飛んでいちばん高い所・摩擦力の仕事などを式の値と比べる・系の選び方で棒と矢印が変わる・矢印の値と棒の差がそろう・
+  系の囲みが出る・力の矢印は系の外から仕事をする力のときだけ出る・外せないチェック欄）。
+  `sim.html?s=場面&t=1.2[&ref=0.6][&nospring][&noearth][&noforce][&light]` でその時刻まで進めた画面を出す（場面の名前は `lib/simcore.js` の `SCENES`）
 - 画面の確認: `index.html?demo=read|draw|choose|calc&q=種類-たね[&fb=1]` で、その問題（答えた後の画面）を出す
 - 生成器の検査は「まえ」「あと」「段」などの使わない言葉と、図の入れ忘れも調べる
 
